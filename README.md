@@ -1,30 +1,17 @@
 # SpiritVale-Probability-Calculator
 
 🚀 Spirit Vale: Probability Calculator
-A high-fidelity probability calculator and roll simulator designed specifically for Spirit Vale players to optimize their gear progression and material management.
+I’ve always really liked probability, so I built this tool to help the community plan gear rolls and manage materials more effectively.
 
-🛠 Key Features
-Variant Library: Support for all item types including Weapons (Melee/Ranged/Magic), Armor (Chest/Legs/Shoes), and Accessories.
+🛠 What it does
+Smart Odds: Automatically calculates your chances, accounting for stat exclusions (e.g., you won't see ATK and MATK together).
+Wanted List: Add multiple "win" conditions to see your combined chance of hitting any of them.
+Prep Guide: Shows exactly how many materials and gold you need based on different confidence levels (50%, 63.2%, 80%, and 99%).
+Simulator: Run a "test roll" to see how the RNG behaves before you spend your real resources.
 
-Smart Math: Automatically accounts for stat exclusions (e.g., you can't roll ATK and MATK together) to give you 100% accurate odds.
-
-Wanted Variants List: Add multiple "acceptable" outcomes to see your combined chance of hitting any of them.
-
-Resource Preparation Guide: * Calculates exact material and gold requirements.
-
-Uses custom formatting for gold (e.g., 4.5M Gold, 15.5K Gold).
-
-Provides confidence benchmarks: 50% (Median), 63.2% (Theoretical), 80% (Likely), and 99% (Safe).
-
-Live Roll Simulator: Test your luck with a real-time simulator that tracks total rolls, gold burned, and "Close Hits" (matching stats but lower values).
-
-📈 How to Use
-Select your Item Type and choose your desired Substats.
-
-Add to Wanted Variants to build a list of gear pieces you'd be happy with.
-
-Check the Prep Guide to see how many materials you should save up before you start rolling.
-
-Run the Simulator to visualize the "Gold Burn" and see how RNG actually behaves over thousands of rolls.
-
-Enjoy!
+How to use it:
+Select your Item Type and desired Substats.
+Click Add to Wanted Variants.
+Check the Prep Guide to see your estimated costs.
+Use the Roll Simulator to see a live breakdown of rolls and gold.
+Enjoy! 🥂
