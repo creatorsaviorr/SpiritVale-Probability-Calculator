@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spirit Vale - Probability Calculator</title>
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 700px; margin: auto; }
+        .card { background: #1e1e1e; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #333; margin-bottom: 20px; }
+        h2 { color: #bb86fc; margin: 0 0 15px 0; font-size: 1.4em; text-align: center; }
+        label { display: block; margin: 15px 0 5px; font-weight: bold; font-size: 0.9em; color: #aaa; }
+        select, input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: white; font-size: 1em; margin-bottom: 10px; box-sizing: border-box; }
+        input:disabled, select:disabled { opacity: 0.4; cursor: not-allowed; }
+        .result-box { margin-top: 15px; padding: 12px; border-radius: 8px; text-align: center; background: #03dac610; border: 1px solid #03dac6; }
+        .odds-big { font-size: 1.6em; font-weight: bold; display: block; color: #03dac6; }
+        .odds-small { font-size: 0.85em; color: #888; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.2s; margin-top: 10px; }
+        .btn-teal { background: #03dac6; color: #000; }
+        .btn-teal:disabled { background: #444; color: #888; cursor: not-allowed; }
+        
+        .prep-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.75em; background: #161616; border-radius: 8px; overflow: hidden; }
+        .prep-table th { background: #333; color: #bb86fc; padding: 8px; text-align: left; }
+        .prep-table td { padding: 8px; border-bottom: 1px solid #222; }
+        .prep-table tr:last-child td { border-bottom: none; }
+        .highlight-row { background: #bb86fc10; font-weight: bold; }
+
+        .btn-clear-list { width: auto; min-width: 200px; margin: 15px auto 0; display: block; background: none; border: 1px solid #cf6679; color: #cf6679; padding: 8px 16px; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: 0.2s; }
+        .btn-clear-list:hover { background: #cf667920; }
+        .target-list { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
+        .target-card { background: #2a2a2a; padding: 10px; border-radius: 8px; border-left: 4px solid #03dac6; display: flex; justify-content: space-between; align-items: center; font-size: 0.85em; }
+        .btn-del { background: #cf6679; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; background: #252525; padding: 12px; border-radius: 8px; font-size: 0.85em; }
+        .stats-grid div { display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .stats-grid b { color: #bb86fc; font-size: 1.1em; }
+        .full-width { grid-column: span 2; border-top: 1px solid #333; padding-top: 8px; }
+        .gold-text { color: #ffd700 !important; }
+        .amber-text { color: #ffb300 !important; }
+        .tab-container { display: flex; margin-top: 10px; }
+        .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-size: 0.85em; background: #1a1a1a; color: #777; border-radius: 8px 8px 0 0; }
+        .tab.active { background: #333; color: #bb86fc; font-weight: bold; border-bottom: 2px solid #bb86fc; }
+        .log-container { height: 400px; overflow-y: auto; background: #000; padding: 15px; font-family: monospace; font-size: 1.25em; border: 1px solid #333; }
+        .log-entry { margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 6px; line-height: 1.3; }
+        .log-gold { color: #ffd700; font-weight: bold; }
+        .success { color: #03dac6; background: #03dac615; border-left: 6px solid #03dac6; padding-left: 12px; font-weight: bold; }
+        .close-hit { color: #ffb300; background: #ffb30015; border-left: 6px solid #ffb300; padding-left: 12px; }
+        .fail { color: #777; }
+        .hidden { display: none !important; }
+        .checkbox-group { display: flex; flex-direction: column; gap: 6px; justify-content: center; height: 100%; padding-top: 10px;}
+        .check-label { font-size: 0.75em; color: #aaa; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: 0.2s; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>Spirit Vale Item Probability Calculator</h2>
+    <label>Item Type</label>
+    <select id="itemType" onchange="initSubstats()"></select>
+    
+    <label>Line 1 Substat</label>
+    <div style="display:flex; gap:10px;">
+        <select id="line1Stat" onchange="updateLine1Max()"></select>
+        <select id="line1Val" onchange="calculateSingle()">
+            <option value="2">2</option>
+            <option value="3" selected>3 (Max)</option>
+        </select>
+    </div>
+    
+    <label>Line 2 Substat</label>
+    <div style="display:flex; gap:10px; margin-bottom:5px;">
+        <select id="line2Stat" onchange="updateLineRange('line2')"></select>
+        <select id="line2Val" onchange="calculateSingle()"></select>
+    </div>
+
+    <label>Line 3 Substat</label>
+    <div style="display:flex; gap:10px;">
+        <select id="line3Stat" onchange="updateLineRange('line3')"></select>
+        <select id="line3Val" onchange="calculateSingle()"></select>
+    </div>
+
+    <div class="result-box">
+        <span id="selectionLabel" class="odds-small">Chance to get this variant or better:</span>
+        <span id="selectionOdds" class="odds-big">1 in ---</span>
+        <span id="selectionPercent" class="odds-small">0%</span>
+    </div>
+
+    <button id="addBtn" class="btn btn-teal" onclick="addTarget()">Add to Wanted Variants</button>
+</div>
+
+<div class="card">
+    <h2>Wanted Variants & Combined Odds</h2>
+    <div id="targetList" class="target-list">
+        <div style="text-align:center; color:#666; font-size:0.9em; padding:10px;">No variants added.</div>
+    </div>
+    
+    <div class="result-box">
+        <span id="combinedLabel" class="odds-small">Combined chance to hit ANY variant in list or better:</span>
+        <span id="combinedOdds" class="odds-big">---</span>
+        <span id="combinedPercent" class="odds-small">0%</span>
+    </div>
+
+    <button class="btn-clear-list" onclick="clearWantedList()">Clear Wanted Variants</button>
+</div>
+
+<div class="card">
+    <h2>Roll Simulator</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+        <div><label>Materials / Roll</label>
+            <select id="matCost" onchange="calculateCombinedOdds()">
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="150">150</option>
+                <option value="200" selected>200</option>
+            </select>
+        </div>
+        <div><label id="goldInputLabel">Gold / Material</label><input type="number" id="goldVal" value="1000" oninput="calculateCombinedOdds()"></div>
+        
+        <div class="full-width">
+            <div id="prepGuide" class="hidden">
+                <table class="prep-table">
+                    <thead>
+                        <tr>
+                            <th>Confidence</th>
+                            <th>Rolls</th>
+                            <th>Materials</th>
+                            <th>Est. Gold</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prepBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div><label>Auto-Roll Amount</label><input type="number" id="rollAmount" value="1"></div>
+        <div class="checkbox-group">
+            <label class="check-label"><input type="checkbox" id="stopOnWin"> Stop on Success</label>
+            <label class="check-label"><input type="checkbox" id="toggleGold" checked onchange="toggleGoldUI()"> Show Gold Metrics</label>
+            <label class="check-label" id="logGoldLabel"><input type="checkbox" id="toggleLogGold" checked onchange="toggleLogGoldUI()"> Log Gold Costs</label>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div>Total Rolls<b id="totalCrafts">0</b></div>
+        <div>Successful<b id="totalWins" style="color:#03dac6">0</b></div>
+        <div class="full-width">Close Hits (Right Stats)<b id="totalClose" class="amber-text">0</b></div>
+        <div class="full-width">Total Materials Used<b id="totalMats">0</b></div>
+        <div class="full-width gold-element">Total Gold Burned<b id="totalGold" class="gold-text">0g</b></div>
+        <div class="full-width">Average Materials / Success<b id="avgMats">--</b></div>
+        <div class="full-width gold-element">Average Gold / Success<b id="avgGold" class="gold-text">--</b></div>
+    </div>
+
+    <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
+
+    <button id="simBtn" class="btn btn-teal" onclick="runSimulation()" disabled style="margin-bottom: 5px;">Add a Variant to Start</button>
+
+    <div class="tab-container">
+        <div id="allTab" class="tab active" onclick="switchLog('all')">All Logs</div>
+        <div id="closeTab" class="tab" onclick="switchLog('close')">Close Hits</div>
+        <div id="winTab" class="tab" onclick="switchLog('win')">Successes</div>
+    </div>
+    <div id="allLog" class="log-container"></div>
+    <div id="closeLog" class="log-container hidden"></div>
+    <div id="winLog" class="log-container hidden"></div>
+    <button style="width:100%; background:none; border:none; color:#ff7597; cursor:pointer; font-size:0.75em; margin-top:10px;" onclick="clearLog()">Clear Stats & Logs</button>
+</div>
+
+<script>
+const data = {
+    "Accessory / Face / Utility / Headgear / Artifact": { 
+        subs: ["HP", "MP", "ATK", "MATK"], 
+        ranges: { "HP":[1,2,"%"], "MP":[1,2,"%"], "ATK":[1,2,"%"], "MATK":[1,2,"%"] } 
+    },
+    "Chest / Shield": { 
+        subs: ["HP", "MP", "DEF", "MDEF", "Damage From Melee", "Damage From Magic", "Healing Received"], 
+        ranges: { "HP":[7,10,"%"], "MP":[7,10,"%"], "DEF":[3,5,""], "MDEF":[3,5,""], "Damage From Melee":[-3,-5,"%"], "Damage From Magic":[-3,-5,"%"], "Healing Received":[7,10,"%"] } 
+    },
+    "Legs": { 
+        subs: ["HP Regen", "MP Regen", "Health Leech", "Flee", "MP Cost"], 
+        ranges: { "HP Regen":[17,25,"%"], "MP Regen":[17,25,"%"], "Health Leech":[3,5,"%"], "Flee":[10,15,""], "MP Cost":[-7,-10,"%"] } 
+    },
+    "Shoes": { 
+        subs: ["Move Speed", "Attack Speed", "Cast Speed"], 
+        ranges: { "Move Speed":[7,10,"%"], "Attack Speed":[7,10,"%"], "Cast Speed":[10,15,"%"] } 
+    },
+    "Melee Weapon": { 
+        subs: ["ATK", "MATK", "Damage Melee", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], 
+        ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Melee":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } 
+    },
+    "Ranged Weapon": { 
+        subs: ["ATK", "MATK", "Damage Ranged", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], 
+        ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Ranged":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } 
+    },
+    "Magic Weapon": { 
+        subs: ["ATK", "MATK", "Damage Magic", "Damage Melee", "MP Cost", "Healing", "Cast Speed"], 
+        ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Magic":[7,10,"%"], "Damage Melee":[7,10,"%"], "MP Cost":[-7,-10,"%"], "Healing":[7,10,"%"], "Cast Speed":[7,10,"%"] } 
+    }
+};
+
+const exclusions = [["ATK", "MATK"], ["Damage Melee", "Damage Magic", "Damage Ranged"], ["DEF", "MDEF"], ["Damage From Melee", "Damage From Magic"], ["HP", "MP"], ["HP Regen", "MP Regen"]];
+const mainStats = ["STR", "VIT", "DEX", "AGI", "INT", "LUK"];
+
+let wantedList = [];
+let totalCrafts = 0, totalMats = 0, totalWins = 0, totalGold = 0, totalClose = 0;
+
+function formatShort(num) {
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+    return num.toLocaleString();
+}
+
+function formatGoldTable(num) {
+    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'M Gold';
+    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M Gold';
+    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K Gold';
+    return num.toLocaleString() + ' Gold';
+}
+
+function init() {
+    const i = document.getElementById("itemType");
+    Object.keys(data).forEach(k => i.add(new Option(k, k)));
+    const m = document.getElementById("line1Stat");
+    mainStats.forEach(s => m.add(new Option(s, s)));
+    m.value = "STR";
+    initSubstats(true);
+}
+
+function updateLine1Max() {
+    document.getElementById("line1Val").value = "3";
+    calculateSingle();
+}
+
+function initSubstats(isFirstLoad = false) {
+    const t = document.getElementById("itemType").value;
+    const s = data[t].subs;
+    const l2 = document.getElementById("line2Stat"), l3 = document.getElementById("line3Stat");
+    l2.innerHTML = l3.innerHTML = "";
+    s.forEach(x => { l2.add(new Option(x, x)); l3.add(new Option(x, x)); });
+    if(isFirstLoad) {
+        l2.value = s.includes("ATK") ? "ATK" : s[0];
+        l3.value = s.includes("HP") ? "HP" : (s[1] || s[0]);
+    }
+    updateLineRange('line2'); updateLineRange('line3');
+}
+
+function updateLineRange(lineId) {
+    const type = document.getElementById("itemType").value;
+    const statName = document.getElementById(lineId + "Stat").value;
+    const valSelect = document.getElementById(lineId + "Val");
+    const r = data[type].ranges[statName];
+    valSelect.innerHTML = "";
+    let min = r[0], max = r[1], suffix = r[2];
+    let step = (max > min) ? 1 : -1;
+    for (let v = min; v !== max + step; v += step) {
+        let label = v + suffix + (v === max ? " (Max)" : "");
+        valSelect.add(new Option(label, v));
+    }
+    valSelect.selectedIndex = valSelect.options.length - 1;
+    calculateSingle();
+}
+
+function getIndividualProb(type, s1, v1, s2, v2, s3, v3) {
+    const subs = data[type].subs;
+    let validPairs = 0;
+    for(let i=0; i<subs.length; i++) {
+        for(let j=i+1; j<subs.length; j++) {
+            if(!exclusions.some(ex => ex.includes(subs[i]) && ex.includes(subs[j]))) validPairs++;
+        }
+    }
+    const p1 = (v1 === 3) ? (1/12) : (2/12);
+    const getRangeProb = (s, v) => {
+        const r = data[type].ranges[s];
+        const total = Math.abs(r[1] - r[0]) + 1;
+        const win = Math.abs(r[1] - v) + 1;
+        return win / total;
+    };
+    return p1 * (1/validPairs) * getRangeProb(s2, v2) * getRangeProb(s3, v3);
+}
+
+function calculateSingle() {
+    const t = document.getElementById("itemType").value;
+    const v1 = parseInt(document.getElementById("line1Val").value);
+    const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
+    const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
+    const isEx = exclusions.some(ex => ex.includes(s2) && ex.includes(s3)) || s2 === s3;
+    const range2 = data[t].ranges[s2], range3 = data[t].ranges[s3];
+    const isMax = (v1 === 3 && v2 == range2[1] && v3 == range3[1]);
+    document.getElementById("selectionLabel").innerText = isMax ? "Chance to get this PERFECT variant:" : "Chance to get this variant or better:";
+    if (isEx) {
+        document.getElementById("addBtn").disabled = true;
+        document.getElementById("selectionOdds").innerText = "INVALID PAIR";
+        document.getElementById("selectionPercent").innerText = "0%";
+    } else {
+        document.getElementById("addBtn").disabled = false;
+        const prob = getIndividualProb(t, "", v1, s2, v2, s3, v3);
+        document.getElementById("selectionOdds").innerText = "1 in " + Math.round(1/prob).toLocaleString();
+        document.getElementById("selectionPercent").innerText = (prob * 100).toFixed(6) + "%";
+    }
+}
+
+function addTarget() {
+    const currentType = document.getElementById("itemType").value;
+    const s1 = document.getElementById("line1Stat").value;
+    const v1 = parseInt(document.getElementById("line1Val").value);
+    const s2 = document.getElementById("line2Stat").value;
+    const v2 = parseInt(document.getElementById("line2Val").value);
+    const s3 = document.getElementById("line3Stat").value;
+    const v3 = parseInt(document.getElementById("line3Val").value);
+
+    if (wantedList.length > 0 && wantedList[0].type !== currentType) {
+        alert("Please clear variants before switching Item Types.");
+        return;
+    }
+
+    const isDuplicate = wantedList.some(t => {
+        const mainMatch = (t.s1 === s1 && t.v1 === v1);
+        const subMatchNormal = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3);
+        const subMatchSwapped = (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
+        return mainMatch && (subMatchNormal || subMatchSwapped);
+    });
+
+    if (isDuplicate) {
+        alert("This exact variant is already in your list.");
+        return;
+    }
+
+    const target = { type: currentType, s1, v1, s2, v2, s3, v3, id: Date.now() };
+    wantedList.push(target);
+    renderWantedList();
+}
+
+function clearWantedList() {
+    wantedList = [];
+    renderWantedList();
+}
+
+function renderWantedList() {
+    const container = document.getElementById("targetList");
+    const simBtn = document.getElementById("simBtn");
+    const guide = document.getElementById("prepGuide");
+    if(wantedList.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>';
+        simBtn.disabled = true; simBtn.innerText = "Add a Variant to Start";
+        document.getElementById("combinedOdds").innerText = "---";
+        document.getElementById("combinedPercent").innerText = "0%";
+        document.getElementById("combinedLabel").innerText = "Combined chance to hit ANY variant in list or better:";
+        guide.classList.add("hidden");
+        return;
+    }
+    simBtn.disabled = false; simBtn.innerText = "Roll";
+    container.innerHTML = "";
+    wantedList.forEach(t => {
+        const suf2 = data[t.type].ranges[t.s2][2], suf3 = data[t.type].ranges[t.s3][2];
+        const div = document.createElement("div");
+        div.className = "target-card";
+        div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${suf2} | ${t.s3} ${t.v3}${suf3}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
+        container.appendChild(div);
+    });
+    calculateCombinedOdds();
+}
+
+function removeTarget(id) {
+    wantedList = wantedList.filter(t => t.id !== id);
+    renderWantedList();
+}
+
+function calculateCombinedOdds() {
+    if(wantedList.length === 0) return;
+    const uniqueGroups = {};
+    let allPerfect = true;
+    wantedList.forEach(t => {
+        const comboKey = [t.s1, t.s2, t.s3].sort().join("|");
+        const prob = getIndividualProb(t.type, t.s1, t.v1, t.s2, t.v2, t.s3, t.v3);
+        if(!uniqueGroups[comboKey] || prob > uniqueGroups[comboKey]) uniqueGroups[comboKey] = prob;
+        const r2 = data[t.type].ranges[t.s2], r3 = data[t.type].ranges[t.s3];
+        if (!(t.v1 === 3 && t.v2 == r2[1] && t.v3 == r3[1])) allPerfect = false;
+    });
+    let probFailAll = 1;
+    Object.values(uniqueGroups).forEach(p => probFailAll *= (1 - p));
+    const win = 1 - probFailAll;
+    
+    document.getElementById("combinedLabel").innerText = allPerfect ? "Combined chance to get ANY of these PERFECT variants:" : "Combined chance to hit ANY variant in list or better:";
+    
+    document.getElementById("combinedOdds").innerText = "1 in " + Math.round(1/win).toLocaleString();
+    document.getElementById("combinedPercent").innerText = (win * 100).toFixed(6) + "%";
+
+    updatePrepGuide(win);
+}
+
+function updatePrepGuide(p) {
+    const guide = document.getElementById("prepGuide");
+    const body = document.getElementById("prepBody");
+    const matCost = parseInt(document.getElementById("matCost").value);
+    const goldVal = parseInt(document.getElementById("goldVal").value) || 0;
+    
+    guide.classList.remove("hidden");
+    body.innerHTML = "";
+
+    const levels = [
+        { label: "50% (Median)", prob: 0.50 },
+        { label: "63.2% (Theoretical)", prob: 0.63212, isTheo: true },
+        { label: "80% (Likely)", prob: 0.80 },
+        { label: "99% (Safe)", prob: 0.99 }
+    ];
+
+    levels.forEach(lvl => {
+        let n;
+        if (lvl.isTheo) {
+            n = Math.ceil(1 / p);
+        } else {
+            n = Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
+        }
+        
+        const mats = n * matCost;
+        const gold = mats * goldVal;
+
+        const tr = document.createElement("tr");
+        if(lvl.isTheo) tr.className = "highlight-row";
+        tr.innerHTML = `
+            <td>${lvl.label}</td>
+            <td>${n.toLocaleString()}</td>
+            <td>${mats.toLocaleString()}</td>
+            <td class="gold-text">${formatGoldTable(gold)}</td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+function runSimulation() {
+    const amount = parseInt(document.getElementById("rollAmount").value) || 1, cost = parseInt(document.getElementById("matCost").value);
+    const goldVal = parseInt(document.getElementById("goldVal").value) || 0, stop = document.getElementById("stopOnWin").checked;
+    const type = wantedList[0].type, subsPool = data[type].subs;
+    const showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
+
+    for(let i=0; i<amount; i++) {
+        totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
+        const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.random() < 0.5 ? 2 : 3;
+        let rS2, rS3;
+        while(true) {
+            rS2 = subsPool[Math.floor(Math.random()*subsPool.length)];
+            rS3 = subsPool[Math.floor(Math.random()*subsPool.length)];
+            if(rS2 !== rS3 && !exclusions.some(ex => ex.includes(rS2) && ex.includes(rS3))) break;
+        }
+        const rollVal = (s) => {
+            const r = data[type].ranges[s];
+            return Math.floor(Math.random() * (Math.max(r[0], r[1]) - Math.min(r[0], r[1]) + 1)) + Math.min(r[0], r[1]);
+        };
+        const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
+        
+        let isWin = false, isClose = false;
+        wantedList.forEach(t => {
+            const statsMatch = (rS1 === t.s1) && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2));
+            if (statsMatch) {
+                const checkV = (rs, rv, ts, tv) => {
+                    const r = data[type].ranges[ts];
+                    return (r[1] < r[0]) ? rv <= tv : rv >= tv;
+                };
+                const valuesMatch = (rV1 >= t.v1) && ((checkV(rS2, rV2, t.s2, t.v2) && checkV(rS3, rV3, t.s3, t.v3)) || (checkV(rS2, rV2, t.s3, t.v3) && checkV(rS3, rV3, t.s2, t.v2)));
+                if (valuesMatch) isWin = true; else isClose = true;
+            }
+        });
+        
+        const gTag = `<span class="log-gold ${showLogGold ? '' : 'hidden'}">[-${(cost*goldVal).toLocaleString()}g]</span>`;
+        const suf2 = data[type].ranges[rS2][2], suf3 = data[type].ranges[rS3][2];
+        const div = document.createElement("div");
+        
+        if (isWin) {
+            totalWins++;
+            div.className = "log-entry success";
+            div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3} - HIT!`;
+            document.getElementById("allLog").prepend(div);
+            document.getElementById("winLog").prepend(div.cloneNode(true));
+            updateStatsUI();
+            if(stop) break;
+        } else {
+            if (isClose) {
+                totalClose++;
+                div.className = "log-entry close-hit";
+                div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3} - CLOSE!`;
+                document.getElementById("closeLog").prepend(div.cloneNode(true));
+            } else {
+                div.className = "log-entry fail";
+                div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3}`;
+            }
+            document.getElementById("allLog").prepend(div);
+            updateBasicCounters();
+        }
+    }
+}
+
+function updateBasicCounters() {
+    document.getElementById("totalCrafts").innerText = totalCrafts.toLocaleString();
+    document.getElementById("totalWins").innerText = totalWins.toLocaleString();
+    document.getElementById("totalClose").innerText = totalClose.toLocaleString();
+    document.getElementById("totalMats").innerText = totalMats.toLocaleString();
+    document.getElementById("totalGold").innerText = totalGold.toLocaleString() + "g";
+}
+
+function updateStatsUI() {
+    updateBasicCounters();
+    if(totalWins > 0) {
+        document.getElementById("avgMats").innerText = Math.round(totalMats / totalWins).toLocaleString();
+        document.getElementById("avgGold").innerText = Math.round(totalGold / totalWins).toLocaleString() + "g";
+    }
+}
+
+function toggleGoldUI() {
+    const show = document.getElementById("toggleGold").checked;
+    document.querySelectorAll(".gold-element").forEach(el => el.classList.toggle("hidden", !show));
+    document.getElementById("toggleLogGold").disabled = !show;
+    toggleLogGoldUI();
+}
+
+function toggleLogGoldUI() {
+    const show = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
+    document.querySelectorAll(".log-gold").forEach(el => el.classList.toggle("hidden", !show));
+}
+
+function switchLog(t) {
+    document.getElementById("allTab").classList.toggle("active", t==='all');
+    document.getElementById("closeTab").classList.toggle("active", t==='close');
+    document.getElementById("winTab").classList.toggle("active", t==='win');
+    document.getElementById("allLog").classList.toggle("hidden", t!=='all');
+    document.getElementById("closeLog").classList.toggle("hidden", t!=='close');
+    document.getElementById("winLog").classList.toggle("hidden", t!=='win');
+}
+
+function clearLog() {
+    totalCrafts = totalWins = totalMats = totalGold = totalClose = 0;
+    document.getElementById("allLog").innerHTML = ""; document.getElementById("winLog").innerHTML = ""; document.getElementById("closeLog").innerHTML = "";
+    document.getElementById("avgMats").innerText = "--"; document.getElementById("avgGold").innerText = "--";
+    updateBasicCounters();
+}
+
+init();
+</script>
+</body>
+</html>
