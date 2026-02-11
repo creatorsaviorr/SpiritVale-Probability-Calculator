@@ -6,6 +6,7 @@
 I’ve always really liked probability, so I built this tool to help the community plan gear rolls and manage materials more effectively.
 
 
+
 🛠 What it does
 
 Smart Odds: Automatically calculates your chances, accounting for stat exclusions (e.g., you won't see ATK and MATK together).
@@ -17,6 +18,7 @@ Prep Guide: Shows exactly how many materials and gold you need based on differen
 Simulator: Run a "test roll" to see how the RNG behaves before you spend your real resources.
 
 
+
 How to use it:
 
 Select your Item Type and desired Substats.
@@ -26,5 +28,9 @@ Click Add to Wanted Variants.
 Check the Prep Guide to see your estimated costs.
 
 Use the Roll Simulator to see a live breakdown of rolls and gold.
+
+
+Disclaimer: This is a fan-made tool. I do not own any assets, names, or content related to Spirit Vale. All rights belong to the game's creators.
+
 
 Enjoy! 🥂
