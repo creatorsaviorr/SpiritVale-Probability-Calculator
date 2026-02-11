@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spirit Vale - Probability Calculator</title>
+    <title>Spirit Vale - Probabiliy Calculator</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 700px; margin: auto; }
         .card { background: #1e1e1e; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #333; margin-bottom: 20px; }
@@ -17,13 +17,11 @@
         .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1em; transition: 0.2s; margin-top: 10px; }
         .btn-teal { background: #03dac6; color: #000; }
         .btn-teal:disabled { background: #444; color: #888; cursor: not-allowed; }
-        
         .prep-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.75em; background: #161616; border-radius: 8px; overflow: hidden; }
         .prep-table th { background: #333; color: #bb86fc; padding: 8px; text-align: left; }
         .prep-table td { padding: 8px; border-bottom: 1px solid #222; }
         .prep-table tr:last-child td { border-bottom: none; }
         .highlight-row { background: #bb86fc10; font-weight: bold; }
-
         .btn-clear-list { width: auto; min-width: 200px; margin: 15px auto 0; display: block; background: none; border: 1px solid #cf6679; color: #cf6679; padding: 8px 16px; border-radius: 6px; font-size: 0.85em; cursor: pointer; transition: 0.2s; }
         .btn-clear-list:hover { background: #cf667920; }
         .target-list { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
@@ -106,7 +104,9 @@
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
         <div><label>Materials / Roll</label>
             <select id="matCost" onchange="calculateCombinedOdds()">
+                <option value="25">25</option>
                 <option value="50">50</option>
+                <option value="75">75</option>
                 <option value="100">100</option>
                 <option value="150">150</option>
                 <option value="200" selected>200</option>
@@ -305,24 +305,14 @@ function addTarget() {
     const v2 = parseInt(document.getElementById("line2Val").value);
     const s3 = document.getElementById("line3Stat").value;
     const v3 = parseInt(document.getElementById("line3Val").value);
-
-    if (wantedList.length > 0 && wantedList[0].type !== currentType) {
-        alert("Please clear variants before switching Item Types.");
-        return;
-    }
-
+    if (wantedList.length > 0 && wantedList[0].type !== currentType) { alert("Please clear variants before switching Item Types."); return; }
     const isDuplicate = wantedList.some(t => {
         const mainMatch = (t.s1 === s1 && t.v1 === v1);
         const subMatchNormal = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3);
         const subMatchSwapped = (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
         return mainMatch && (subMatchNormal || subMatchSwapped);
     });
-
-    if (isDuplicate) {
-        alert("This exact variant is already in your list.");
-        return;
-    }
-
+    if (isDuplicate) { alert("This exact variant is already in your list."); return; }
     const target = { type: currentType, s1, v1, s2, v2, s3, v3, id: Date.now() };
     wantedList.push(target);
     renderWantedList();
@@ -377,12 +367,9 @@ function calculateCombinedOdds() {
     let probFailAll = 1;
     Object.values(uniqueGroups).forEach(p => probFailAll *= (1 - p));
     const win = 1 - probFailAll;
-    
     document.getElementById("combinedLabel").innerText = allPerfect ? "Combined chance to get ANY of these PERFECT variants:" : "Combined chance to hit ANY variant in list or better:";
-    
     document.getElementById("combinedOdds").innerText = "1 in " + Math.round(1/win).toLocaleString();
     document.getElementById("combinedPercent").innerText = (win * 100).toFixed(6) + "%";
-
     updatePrepGuide(win);
 }
 
@@ -391,36 +378,16 @@ function updatePrepGuide(p) {
     const body = document.getElementById("prepBody");
     const matCost = parseInt(document.getElementById("matCost").value);
     const goldVal = parseInt(document.getElementById("goldVal").value) || 0;
-    
     guide.classList.remove("hidden");
     body.innerHTML = "";
-
-    const levels = [
-        { label: "50% (Median)", prob: 0.50 },
-        { label: "63.2% (Theoretical)", prob: 0.63212, isTheo: true },
-        { label: "80% (Likely)", prob: 0.80 },
-        { label: "99% (Safe)", prob: 0.99 }
-    ];
-
+    const levels = [{ label: "50% (Median)", prob: 0.50 }, { label: "63.2% (Theoretical)", prob: 0.63212, isTheo: true }, { label: "80% (Likely)", prob: 0.80 }, { label: "99% (Safe)", prob: 0.99 }];
     levels.forEach(lvl => {
-        let n;
-        if (lvl.isTheo) {
-            n = Math.ceil(1 / p);
-        } else {
-            n = Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
-        }
-        
+        let n = lvl.isTheo ? Math.ceil(1 / p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
         const mats = n * matCost;
         const gold = mats * goldVal;
-
         const tr = document.createElement("tr");
         if(lvl.isTheo) tr.className = "highlight-row";
-        tr.innerHTML = `
-            <td>${lvl.label}</td>
-            <td>${n.toLocaleString()}</td>
-            <td>${mats.toLocaleString()}</td>
-            <td class="gold-text">${formatGoldTable(gold)}</td>
-        `;
+        tr.innerHTML = `<td>${lvl.label}</td><td>${n.toLocaleString()}</td><td>${mats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(gold)}</td>`;
         body.appendChild(tr);
     });
 }
@@ -430,7 +397,6 @@ function runSimulation() {
     const goldVal = parseInt(document.getElementById("goldVal").value) || 0, stop = document.getElementById("stopOnWin").checked;
     const type = wantedList[0].type, subsPool = data[type].subs;
     const showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
-
     for(let i=0; i<amount; i++) {
         totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
         const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.random() < 0.5 ? 2 : 3;
@@ -445,44 +411,32 @@ function runSimulation() {
             return Math.floor(Math.random() * (Math.max(r[0], r[1]) - Math.min(r[0], r[1]) + 1)) + Math.min(r[0], r[1]);
         };
         const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
-        
         let isWin = false, isClose = false;
         wantedList.forEach(t => {
             const statsMatch = (rS1 === t.s1) && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2));
             if (statsMatch) {
-                const checkV = (rs, rv, ts, tv) => {
-                    const r = data[type].ranges[ts];
-                    return (r[1] < r[0]) ? rv <= tv : rv >= tv;
-                };
+                const checkV = (rs, rv, ts, tv) => { const r = data[type].ranges[ts]; return (r[1] < r[0]) ? rv <= tv : rv >= tv; };
                 const valuesMatch = (rV1 >= t.v1) && ((checkV(rS2, rV2, t.s2, t.v2) && checkV(rS3, rV3, t.s3, t.v3)) || (checkV(rS2, rV2, t.s3, t.v3) && checkV(rS3, rV3, t.s2, t.v2)));
                 if (valuesMatch) isWin = true; else isClose = true;
             }
         });
-        
         const gTag = `<span class="log-gold ${showLogGold ? '' : 'hidden'}">[-${(cost*goldVal).toLocaleString()}g]</span>`;
         const suf2 = data[type].ranges[rS2][2], suf3 = data[type].ranges[rS3][2];
         const div = document.createElement("div");
-        
         if (isWin) {
-            totalWins++;
-            div.className = "log-entry success";
+            totalWins++; div.className = "log-entry success";
             div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3} - HIT!`;
-            document.getElementById("allLog").prepend(div);
-            document.getElementById("winLog").prepend(div.cloneNode(true));
-            updateStatsUI();
-            if(stop) break;
+            document.getElementById("allLog").prepend(div); document.getElementById("winLog").prepend(div.cloneNode(true));
+            updateStatsUI(); if(stop) break;
         } else {
             if (isClose) {
-                totalClose++;
-                div.className = "log-entry close-hit";
+                totalClose++; div.className = "log-entry close-hit";
                 div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3} - CLOSE!`;
                 document.getElementById("closeLog").prepend(div.cloneNode(true));
             } else {
-                div.className = "log-entry fail";
-                div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3}`;
+                div.className = "log-entry fail"; div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3}`;
             }
-            document.getElementById("allLog").prepend(div);
-            updateBasicCounters();
+            document.getElementById("allLog").prepend(div); updateBasicCounters();
         }
     }
 }
