@@ -1,9 +1,9 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spirit Vale - Probabiliy Calculator</title>
+    <title>Spirit Vale - Probability Calculator</title>
     <style>
         body { font-family: -apple-system, sans-serif; background: #121212; color: #e0e0e0; padding: 20px; max-width: 700px; margin: auto; }
         .card { background: #1e1e1e; border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); border: 1px solid #333; margin-bottom: 20px; }
@@ -112,7 +112,7 @@
                 <option value="200" selected>200</option>
             </select>
         </div>
-        <div><label id="goldInputLabel">Gold / Material</label><input type="number" id="goldVal" value="1000" oninput="calculateCombinedOdds()"></div>
+        <div><label id="goldInputLabel">Gold / Material</label><input type="number" id="goldVal" value="1000" min="0" step="1" oninput="calculateCombinedOdds()"></div>
         
         <div class="full-width">
             <div id="prepGuide" class="hidden">
@@ -130,7 +130,7 @@
             </div>
         </div>
 
-        <div><label>Auto-Roll Amount</label><input type="number" id="rollAmount" value="1"></div>
+        <div><label>Auto-Roll Amount</label><input type="number" id="rollAmount" value="1" min="1" step="1"></div>
         <div class="checkbox-group">
             <label class="check-label"><input type="checkbox" id="stopOnWin"> Stop on Success</label>
             <label class="check-label"><input type="checkbox" id="toggleGold" checked onchange="toggleGoldUI()"> Show Gold Metrics</label>
@@ -201,18 +201,12 @@ const mainStats = ["STR", "VIT", "DEX", "AGI", "INT", "LUK"];
 let wantedList = [];
 let totalCrafts = 0, totalMats = 0, totalWins = 0, totalGold = 0, totalClose = 0;
 
-function formatShort(num) {
-    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
-    if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
-    if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-    return num.toLocaleString();
-}
-
 function formatGoldTable(num) {
-    if (num >= 1e9) return (num / 1e9).toFixed(1) + 'M Gold';
+    if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T Gold';
+    if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B Gold';
     if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M Gold';
     if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K Gold';
-    return num.toLocaleString() + ' Gold';
+    return Math.floor(num).toLocaleString() + ' Gold';
 }
 
 function init() {
@@ -377,26 +371,62 @@ function updatePrepGuide(p) {
     const guide = document.getElementById("prepGuide");
     const body = document.getElementById("prepBody");
     const matCost = parseInt(document.getElementById("matCost").value);
-    const goldVal = parseInt(document.getElementById("goldVal").value) || 0;
+    
+    // Flatten goldVal to integer
+    let goldVal = Math.floor(parseFloat(document.getElementById("goldVal").value)) || 0;
+    if(goldVal < 0) { goldVal = 0; document.getElementById("goldVal").value = 0; }
+    else { document.getElementById("goldVal").value = goldVal; }
+
     guide.classList.remove("hidden");
     body.innerHTML = "";
-    const levels = [{ label: "50% (Median)", prob: 0.50 }, { label: "63.2% (Theoretical)", prob: 0.63212, isTheo: true }, { label: "80% (Likely)", prob: 0.80 }, { label: "99% (Safe)", prob: 0.99 }];
+    
+    const levels = [
+        { label: "Median", prob: 0.50 }, 
+        { label: "Theoretical", isTheo: true }, 
+        { label: "Likely", prob: 0.80 }, 
+        { label: "Safe", prob: 0.99 }
+    ];
+    
     levels.forEach(lvl => {
-        let n = lvl.isTheo ? Math.ceil(1 / p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
+        let n;
+        let displayProb;
+        
+        if(lvl.isTheo) {
+            n = Math.round(1 / p);
+            displayProb = (1 - Math.pow(1 - p, n)) * 100;
+        } else {
+            n = Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
+            displayProb = lvl.prob * 100;
+        }
+        
+        const labelText = lvl.isTheo ? `${displayProb.toFixed(1)}% (${lvl.label})` : `${displayProb.toFixed(0)}% (${lvl.label})`;
+        
         const mats = n * matCost;
         const gold = mats * goldVal;
         const tr = document.createElement("tr");
         if(lvl.isTheo) tr.className = "highlight-row";
-        tr.innerHTML = `<td>${lvl.label}</td><td>${n.toLocaleString()}</td><td>${mats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(gold)}</td>`;
+        tr.innerHTML = `<td>${labelText}</td><td>${n.toLocaleString()}</td><td>${mats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(gold)}</td>`;
         body.appendChild(tr);
     });
 }
 
 function runSimulation() {
-    const amount = parseInt(document.getElementById("rollAmount").value) || 1, cost = parseInt(document.getElementById("matCost").value);
-    const goldVal = parseInt(document.getElementById("goldVal").value) || 0, stop = document.getElementById("stopOnWin").checked;
+    // Flatten amount to integer
+    let amount = Math.floor(parseFloat(document.getElementById("rollAmount").value)) || 1;
+    if (amount < 1) { amount = 1; }
+    document.getElementById("rollAmount").value = amount;
+    
+    const cost = parseInt(document.getElementById("matCost").value);
+    
+    // Flatten goldVal to integer
+    let goldVal = Math.floor(parseFloat(document.getElementById("goldVal").value)) || 0;
+    if (goldVal < 0) { goldVal = 0; }
+    document.getElementById("goldVal").value = goldVal;
+    
+    const stop = document.getElementById("stopOnWin").checked;
     const type = wantedList[0].type, subsPool = data[type].subs;
     const showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
+    
     for(let i=0; i<amount; i++) {
         totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
         const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.random() < 0.5 ? 2 : 3;
