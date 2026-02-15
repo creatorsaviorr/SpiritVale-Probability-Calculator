@@ -92,11 +92,13 @@
     <div id="targetList" class="target-list">
         <div style="text-align:center; color:#666; font-size:0.9em; padding:10px;">No variants added.</div>
     </div>
+    
     <div class="result-box">
         <span id="combinedLabel" class="odds-small">Combined chance to hit ANY variant in list or better:</span>
         <span id="combinedOdds" class="odds-big">---</span>
         <span id="combinedPercent" class="odds-small">0%</span>
     </div>
+
     <button class="btn-clear-list" onclick="clearWantedList()">Clear Wanted Variants</button>
 </div>
 
@@ -108,64 +110,71 @@
                 <option value="25">25</option><option value="50">50</option><option value="75">75</option><option value="100">100</option><option value="150">150</option><option value="200" selected>200</option>
             </select>
         </div>
-        <div><label id="goldInputLabel">Gold / Material</label><input type="number" id="goldVal" value="1000" min="0" step="1" oninput="calculateCombinedOdds()"></div>
-        <div class="full-width"><div id="prepGuide" class="hidden"><table class="prep-table"><thead><tr><th>Confidence</th><th>Rolls</th><th>Materials</th><th>Est. Gold</th></tr></thead><tbody id="prepBody"></tbody></table></div></div>
-        <div><label>Auto-Roll Amount</label><input type="number" id="rollAmount" value="1" min="1" step="1"></div>
+        <div><label id="goldInputLabel">Gold / Material</label><input type="number" id="goldVal" value="1000" min="0" step="1" oninput="validateIntegerInput(this, 0); calculateCombinedOdds();"></div>
+        
+        <div class="full-width">
+            <div id="prepGuide" class="hidden">
+                <table class="prep-table">
+                    <thead>
+                        <tr>
+                            <th>Confidence</th>
+                            <th>Rolls</th>
+                            <th>Materials</th>
+                            <th>Est. Gold</th>
+                        </tr>
+                    </thead>
+                    <tbody id="prepBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div><label>Auto-Roll Amount</label><input type="number" id="rollAmount" value="1" min="1" step="1" oninput="validateIntegerInput(this, 1)"></div>
         <div class="checkbox-group">
             <label class="check-label"><input type="checkbox" id="stopOnWin"> Stop on Success</label>
             <label class="check-label"><input type="checkbox" id="toggleGold" checked onchange="toggleGoldUI()"> Show Gold Metrics</label>
-            <label class="check-label" id="logGoldLabel"><input type="checkbox" id="toggleLogGold" checked onchange="toggleLogGoldUI()"> Log Gold Costs</label>
+            <label class="check-label" id="logGoldLabel"><input type="checkbox" id="toggleLogGold" checked onchange="toggleLogGoldUI()"> Show Log Gold Costs</label>
         </div>
     </div>
+
     <div class="stats-grid">
-        <div>Total Rolls<b id="totalCrafts">0</b></div><div>Successful<b id="totalWins" style="color:#03dac6">0</b></div>
+        <div>Total Rolls<b id="totalCrafts">0</b></div>
+        <div>Successful<b id="totalWins" style="color:#03dac6">0</b></div>
         <div class="full-width">Close Hits (Right Stats)<b id="totalClose" class="amber-text">0</b></div>
-        <div class="full-width">Total Materials Used<b id="totalMats">0</b></div><div class="full-width gold-element">Total Gold Burned<b id="totalGold" class="gold-text">0g</b></div>
-        <div class="full-width">Average Materials / Success<b id="avgMats">--</b></div><div class="full-width gold-element">Average Gold / Success<b id="avgGold" class="gold-text">--</b></div>
+        <div class="full-width">Total Materials Used<b id="totalMats">0</b></div>
+        <div class="full-width gold-element">Total Gold Burned<b id="totalGold" class="gold-text">0g</b></div>
+        <div class="full-width">Average Materials / Success<b id="avgMats">--</b></div>
+        <div class="full-width gold-element">Average Gold / Success<b id="avgGold" class="gold-text">--</b></div>
     </div>
+
     <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
-    <button id="simBtn" class="btn btn-teal" onclick="runSimulation()" disabled style="margin-bottom: 5px;">Add a Variant to Start</button>
-    <div class="tab-container"><div id="allTab" class="tab active" onclick="switchLog('all')">All Logs</div><div id="closeTab" class="tab" onclick="switchLog('close')">Close Hits</div><div id="winTab" class="tab" onclick="switchLog('win')">Successes</div></div>
-    <div id="allLog" class="log-container"></div><div id="closeLog" class="log-container hidden"></div><div id="winLog" class="log-container hidden"></div>
+
+    <button id="simBtn" class="btn btn-teal" onclick="runSimulation()" disabled>Add a Variant to Start</button>
+
+    <div class="tab-container">
+        <div id="allTab" class="tab active" onclick="switchLog('all')">All Logs</div>
+        <div id="closeTab" class="tab" onclick="switchLog('close')">Close Hits</div>
+        <div id="winTab" class="tab" onclick="switchLog('win')">Successes</div>
+    </div>
+    <div id="allLog" class="log-container"></div>
+    <div id="closeLog" class="log-container hidden"></div>
+    <div id="winLog" class="log-container hidden"></div>
     <button style="width:100%; background:none; border:none; color:#ff7597; cursor:pointer; font-size:0.75em; margin-top:10px;" onclick="clearLog()">Clear Stats & Logs</button>
 </div>
 
 <script>
 const data = {
-    "Accessory / Face / Utility / Headgear / Artifact": { 
-        subs: ["HP", "MP", "ATK", "MATK"], 
-        ranges: { "HP":[1,2,"%"], "MP":[1,2,"%"], "ATK":[1,2,"%"], "MATK":[1,2,"%"] } 
-    },
-    "Chest / Shield": { 
-        subs: ["HP", "MP", "DEF", "MDEF", "Damage From Melee", "Damage From Magic", "Healing Received"], 
-        ranges: { "HP":[7,10,"%"], "MP":[7,10,"%"], "DEF":[3,5,""], "MDEF":[3,5,""], "Damage From Melee":[-3,-5,"%"], "Damage From Magic":[-3,-5,"%"], "Healing Received":[7,10,"%"] } 
-    },
-    "Legs": { 
-        subs: ["HP Regen", "MP Regen", "Health Leech", "Flee", "MP Cost"], 
-        ranges: { "HP Regen":[17,25,"%"], "MP Regen":[17,25,"%"], "Health Leech":[3,5,"%"], "Flee":[10,15,""], "MP Cost":[-7,-10,"%"] } 
-    },
-    "Shoes": { 
-        subs: ["Move Speed", "Attack Speed", "Cast Speed"], 
-        ranges: { "Move Speed":[7,10,"%"], "Attack Speed":[7,10,"%"], "Cast Speed":[10,15,"%"] } 
-    },
-    "Melee Weapon": { 
-        subs: ["ATK", "MATK", "Damage Melee", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], 
-        ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Melee":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } 
-    },
-    "Ranged Weapon": { 
-        subs: ["ATK", "MATK", "Damage Ranged", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], 
-        ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Ranged":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } 
-    },
-    "Magic Weapon": { 
-        subs: ["ATK", "MATK", "Damage Magic", "Damage Melee", "MP Cost", "Healing", "Cast Speed"], 
-        ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Magic":[7,10,"%"], "Damage Melee":[7,10,"%"], "MP Cost":[-7,-10,"%"], "Healing":[7,10,"%"], "Cast Speed":[7,10,"%"] } 
-    }
+    "Accessory / Face / Utility / Headgear / Artifact": { subs: ["HP", "MP", "ATK", "MATK"], ranges: { "HP":[1,2,"%"], "MP":[1,2,"%"], "ATK":[1,2,"%"], "MATK":[1,2,"%"] } },
+    "Chest / Shield": { subs: ["HP", "MP", "DEF", "MDEF", "Damage From Melee", "Damage From Magic", "Healing Received"], ranges: { "HP":[7,10,"%"], "MP":[7,10,"%"], "DEF":[3,5,""], "MDEF":[3,5,""], "Damage From Melee":[-3,-5,"%"], "Damage From Magic":[-3,-5,"%"], "Healing Received":[7,10,"%"] } },
+    "Legs": { subs: ["HP Regen", "MP Regen", "Health Leech", "Flee", "MP Cost"], ranges: { "HP Regen":[17,25,"%"], "MP Regen":[17,25,"%"], "Health Leech":[3,5,"%"], "Flee":[10,15,""], "MP Cost":[-7,-10,"%"] } },
+    "Shoes": { subs: ["Move Speed", "Attack Speed", "Cast Speed"], ranges: { "Move Speed":[7,10,"%"], "Attack Speed":[7,10,"%"], "Cast Speed":[10,15,"%"] } },
+    "Melee Weapon": { subs: ["ATK", "MATK", "Damage Melee", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Melee":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } },
+    "Ranged Weapon": { subs: ["ATK", "MATK", "Damage Ranged", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Ranged":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } },
+    "Magic Weapon": { subs: ["ATK", "MATK", "Damage Magic", "Damage Melee", "MP Cost", "Healing", "Cast Speed"], ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Magic":[7,10,"%"], "Damage Melee":[7,10,"%"], "MP Cost":[-7,-10,"%"], "Healing":[7,10,"%"], "Cast Speed":[7,10,"%"] } }
 };
 
 const exclusions = [["ATK", "MATK"], ["Damage Melee", "Damage Magic", "Damage Ranged"], ["DEF", "MDEF"], ["Damage From Melee", "Damage From Magic"], ["HP", "MP"], ["HP Regen", "MP Regen"]];
 const mainStats = ["STR", "VIT", "DEX", "AGI", "INT", "LUK"];
 
-// Presets mapping
 const presets = {
     "Accessory / Face / Utility / Headgear / Artifact": { s1: "STR", v1: 3, s2: "HP", v2: 2, s3: "ATK", v3: 2 },
     "Chest / Shield": { s1: "VIT", v1: 3, s2: "HP", v2: 10, s3: "Damage From Magic", v3: -5 },
@@ -178,6 +187,12 @@ const presets = {
 
 let wantedList = [];
 let totalCrafts = 0, totalMats = 0, totalWins = 0, totalGold = 0, totalClose = 0;
+
+function validateIntegerInput(el, min) {
+    let val = Math.round(parseFloat(el.value));
+    if (isNaN(val) || val < min) val = min;
+    el.value = val;
+}
 
 function formatGoldTable(num) {
     if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T Gold';
@@ -195,31 +210,19 @@ function init() {
     initSubstats();
 }
 
-function updateLine1Max() {
-    document.getElementById("line1Val").value = "3";
-    calculateSingle();
-}
+function updateLine1Max() { document.getElementById("line1Val").value = "3"; calculateSingle(); }
 
 function initSubstats() {
     const type = document.getElementById("itemType").value;
     const s = data[type].subs;
-    const l2S = document.getElementById("line2Stat"), l3S = document.getElementById("line3Stat");
     const l1S = document.getElementById("line1Stat"), l1V = document.getElementById("line1Val");
-    
-    // Clear and Fill Stat Lists
+    const l2S = document.getElementById("line2Stat"), l3S = document.getElementById("line3Stat");
     l2S.innerHTML = l3S.innerHTML = "";
     s.forEach(x => { l2S.add(new Option(x, x)); l3S.add(new Option(x, x)); });
-
-    // Apply Presets
     const p = presets[type];
-    l1S.value = p.s1;
-    l1V.value = p.v1;
-    l2S.value = p.s2;
-    l3S.value = p.s3;
-
-    // Refresh range dropdowns based on new stats
-    updateLineRange('line2', p.v2);
-    updateLineRange('line3', p.v3);
+    l1S.value = p.s1; l1V.value = p.v1;
+    l2S.value = p.s2; l3S.value = p.s3;
+    updateLineRange('line2', p.v2); updateLineRange('line3', p.v3);
 }
 
 function updateLineRange(lineId, forceVal = null) {
@@ -230,34 +233,22 @@ function updateLineRange(lineId, forceVal = null) {
     valSelect.innerHTML = "";
     let min = r[0], max = r[1], suffix = r[2];
     let step = (max > min) ? 1 : -1;
-    for (let v = min; v !== max + step; v += step) {
-        let label = v + suffix + (v === max ? " (Max)" : "");
-        valSelect.add(new Option(label, v));
-    }
-    
-    if (forceVal !== null) {
-        valSelect.value = forceVal;
-    } else {
-        valSelect.selectedIndex = valSelect.options.length - 1;
-    }
+    for (let v = min; v !== max + step; v += step) valSelect.add(new Option(v + suffix + (v === max ? " (Max)" : ""), v));
+    if (forceVal !== null) valSelect.value = forceVal;
+    else valSelect.selectedIndex = valSelect.options.length - 1;
     calculateSingle();
 }
 
-// Logic for probability and simulation remains as in previous versions...
 function getIndividualProb(type, s1, v1, s2, v2, s3, v3) {
     const subs = data[type].subs;
     let validPairs = 0;
     for(let i=0; i<subs.length; i++) {
-        for(let j=i+1; j<subs.length; j++) {
-            if(!exclusions.some(ex => ex.includes(subs[i]) && ex.includes(subs[j]))) validPairs++;
-        }
+        for(let j=i+1; j<subs.length; j++) if(!exclusions.some(ex => ex.includes(subs[i]) && ex.includes(subs[j]))) validPairs++;
     }
     const p1 = (v1 === 3) ? (1/12) : (2/12);
     const getRangeProb = (s, v) => {
         const r = data[type].ranges[s];
-        const total = Math.abs(r[1] - r[0]) + 1;
-        const win = Math.abs(r[1] - v) + 1;
-        return win / total;
+        return (Math.abs(r[1] - v) + 1) / (Math.abs(r[1] - r[0]) + 1);
     };
     return p1 * (1/validPairs) * getRangeProb(s2, v2) * getRangeProb(s3, v3);
 }
@@ -268,96 +259,86 @@ function calculateSingle() {
     const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
     const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
     const isEx = exclusions.some(ex => ex.includes(s2) && ex.includes(s3)) || s2 === s3;
-    const range2 = data[t].ranges[s2], range3 = data[t].ranges[s3];
-    const isMax = (v1 === 3 && v2 == range2[1] && v3 == range3[1]);
-    
+    const isMax = (v1 === 3 && v2 == data[t].ranges[s2][1] && v3 == data[t].ranges[s3][1]);
     const box = document.getElementById("selectionBox");
-    const label = document.getElementById("selectionLabel");
-    const oddsText = document.getElementById("selectionOdds");
-    const percentText = document.getElementById("selectionPercent");
-
     if (isEx) {
-        box.classList.add("invalid");
-        document.getElementById("addBtn").disabled = true;
-        label.innerText = "Invalid Stat Combination: These stats cannot roll together";
-        oddsText.innerText = "---";
-        percentText.innerText = "0%";
+        box.classList.add("invalid"); document.getElementById("addBtn").disabled = true;
+        document.getElementById("selectionLabel").innerText = "Invalid Stat Combination: These stats cannot roll together";
+        document.getElementById("selectionOdds").innerText = "---"; document.getElementById("selectionPercent").innerText = "0%";
     } else {
-        box.classList.remove("invalid");
-        document.getElementById("addBtn").disabled = false;
-        label.innerText = isMax ? "Chance to get this PERFECT variant:" : "Chance to get this variant or better:";
+        box.classList.remove("invalid"); document.getElementById("addBtn").disabled = false;
+        document.getElementById("selectionLabel").innerText = isMax ? "Chance to get this PERFECT variant:" : "Chance to get this variant or better:";
         const prob = getIndividualProb(t, "", v1, s2, v2, s3, v3);
-        oddsText.innerText = "1 in " + Math.round(1/prob).toLocaleString();
-        percentText.innerText = (prob * 100).toFixed(6) + "%";
+        document.getElementById("selectionOdds").innerText = "1 in " + Math.round(1/prob).toLocaleString();
+        document.getElementById("selectionPercent").innerText = (prob * 100).toFixed(6) + "%";
     }
 }
 
 function addTarget() {
-    const currentType = document.getElementById("itemType").value;
-    const s1 = document.getElementById("line1Stat").value;
-    const v1 = parseInt(document.getElementById("line1Val").value);
-    const s2 = document.getElementById("line2Stat").value;
-    const v2 = parseInt(document.getElementById("line2Val").value);
-    const s3 = document.getElementById("line3Stat").value;
-    const v3 = parseInt(document.getElementById("line3Val").value);
-    if (wantedList.length > 0 && wantedList[0].type !== currentType) { alert("Please clear variants before switching Item Types."); return; }
+    const type = document.getElementById("itemType").value;
+    const s1 = document.getElementById("line1Stat").value, v1 = parseInt(document.getElementById("line1Val").value);
+    const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
+    const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
+    
+    if (wantedList.length > 0 && wantedList[0].type !== type) { alert("Please clear variants before switching Item Types."); return; }
+    
+    // Exact duplicate check (handles swapped Line 2/3 as well)
     const isDuplicate = wantedList.some(t => {
         const mainMatch = (t.s1 === s1 && t.v1 === v1);
-        const subMatchNormal = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3);
-        const subMatchSwapped = (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
-        return mainMatch && (subMatchNormal || subMatchSwapped);
+        const subMatch = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3) || 
+                         (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
+        return mainMatch && subMatch;
     });
-    if (isDuplicate) { alert("This exact variant is already in your list."); return; }
-    const target = { type: currentType, s1, v1, s2, v2, s3, v3, id: Date.now() };
-    wantedList.push(target);
+
+    if (isDuplicate) { alert("This variant is already in your list."); return; }
+    
+    wantedList.push({ type, s1, v1, s2, v2, s3, v3, id: Date.now() });
     renderWantedList();
 }
-
-function clearWantedList() { wantedList = []; renderWantedList(); }
 
 function renderWantedList() {
     const container = document.getElementById("targetList");
     const simBtn = document.getElementById("simBtn");
-    const guide = document.getElementById("prepGuide");
+    
     if(wantedList.length === 0) {
         container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>';
-        simBtn.disabled = true; simBtn.innerText = "Add a Variant to Start";
+        simBtn.disabled = true; 
+        simBtn.innerText = "Add a Variant to Start";
+        
+        // Reset label and values when empty
+        document.getElementById("combinedLabel").innerText = "Combined chance to hit ANY variant in list or better:";
         document.getElementById("combinedOdds").innerText = "---";
         document.getElementById("combinedPercent").innerText = "0%";
-        document.getElementById("combinedLabel").innerText = "Combined chance to hit ANY variant in list or better:";
-        guide.classList.add("hidden");
+        
+        document.getElementById("prepGuide").classList.add("hidden"); 
         return;
     }
-    simBtn.disabled = false; simBtn.innerText = "Roll";
+    
+    simBtn.disabled = false; 
+    simBtn.innerText = "Roll"; 
     container.innerHTML = "";
+    
     wantedList.forEach(t => {
-        const suf2 = data[t.type].ranges[t.s2][2], suf3 = data[t.type].ranges[t.s3][2];
-        const div = document.createElement("div");
-        div.className = "target-card";
-        div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${suf2} | ${t.s3} ${t.v3}${suf3}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
+        const div = document.createElement("div"); div.className = "target-card";
+        div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${data[t.type].ranges[t.s2][2]} | ${t.s3} ${t.v3}${data[t.type].ranges[t.s3][2]}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
         container.appendChild(div);
     });
     calculateCombinedOdds();
 }
 
-function removeTarget(id) {
-    wantedList = wantedList.filter(t => t.id !== id);
-    renderWantedList();
-}
+function clearWantedList() { wantedList = []; renderWantedList(); }
+function removeTarget(id) { wantedList = wantedList.filter(t => t.id !== id); renderWantedList(); }
 
 function calculateCombinedOdds() {
     if(wantedList.length === 0) return;
-    const uniqueGroups = {};
-    let allPerfect = true;
+    const uniqueGroups = {}; let allPerfect = true;
     wantedList.forEach(t => {
         const comboKey = [t.s1, t.s2, t.s3].sort().join("|");
         const prob = getIndividualProb(t.type, t.s1, t.v1, t.s2, t.v2, t.s3, t.v3);
         if(!uniqueGroups[comboKey] || prob > uniqueGroups[comboKey]) uniqueGroups[comboKey] = prob;
-        const r2 = data[t.type].ranges[t.s2], r3 = data[t.type].ranges[t.s3];
-        if (!(t.v1 === 3 && t.v2 == r2[1] && t.v3 == r3[1])) allPerfect = false;
+        if (!(t.v1 === 3 && t.v2 == data[t.type].ranges[t.s2][1] && t.v3 == data[t.type].ranges[t.s3][1])) allPerfect = false;
     });
-    let probFailAll = 1;
-    Object.values(uniqueGroups).forEach(p => probFailAll *= (1 - p));
+    let probFailAll = 1; Object.values(uniqueGroups).forEach(p => probFailAll *= (1 - p));
     const win = 1 - probFailAll;
     document.getElementById("combinedLabel").innerText = allPerfect ? "Combined chance to get ANY of these PERFECT variants:" : "Combined chance to hit ANY variant in list or better:";
     document.getElementById("combinedOdds").innerText = "1 in " + Math.round(1/win).toLocaleString();
@@ -366,77 +347,50 @@ function calculateCombinedOdds() {
 }
 
 function updatePrepGuide(p) {
-    const guide = document.getElementById("prepGuide");
     const body = document.getElementById("prepBody");
     const matCost = parseInt(document.getElementById("matCost").value);
-    let goldVal = Math.floor(parseFloat(document.getElementById("goldVal").value)) || 0;
-    if(goldVal < 0) { goldVal = 0; document.getElementById("goldVal").value = 0; }
-    else { document.getElementById("goldVal").value = goldVal; }
-    guide.classList.remove("hidden");
-    body.innerHTML = "";
-    const levels = [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }];
-    levels.forEach(lvl => {
-        let n; let displayProb;
-        if(lvl.isTheo) { n = Math.round(1 / p); displayProb = (1 - Math.pow(1 - p, n)) * 100; } 
-        else { n = Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p)); displayProb = lvl.prob * 100; }
-        const labelText = lvl.isTheo ? `${displayProb.toFixed(1)}% (${lvl.label})` : `${displayProb.toFixed(0)}% (${lvl.label})`;
-        const mats = n * matCost; const gold = mats * goldVal;
-        const tr = document.createElement("tr");
-        if(lvl.isTheo) tr.className = "highlight-row";
-        tr.innerHTML = `<td>${labelText}</td><td>${n.toLocaleString()}</td><td>${mats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(gold)}</td>`;
+    const goldVal = parseInt(document.getElementById("goldVal").value);
+    document.getElementById("prepGuide").classList.remove("hidden"); body.innerHTML = "";
+    [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
+        let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
+        let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
+        const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
+        tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${(n * matCost).toLocaleString()}</td><td class="gold-text">${formatGoldTable(n * matCost * goldVal)}</td>`;
         body.appendChild(tr);
     });
 }
 
 function runSimulation() {
-    let amount = Math.floor(parseFloat(document.getElementById("rollAmount").value)) || 1;
-    if (amount < 1) amount = 1;
-    document.getElementById("rollAmount").value = amount;
+    const amount = parseInt(document.getElementById("rollAmount").value);
     const cost = parseInt(document.getElementById("matCost").value);
-    let goldVal = Math.floor(parseFloat(document.getElementById("goldVal").value)) || 0;
-    if (goldVal < 0) goldVal = 0;
-    document.getElementById("goldVal").value = goldVal;
+    const goldVal = parseInt(document.getElementById("goldVal").value);
     const stop = document.getElementById("stopOnWin").checked;
-    const type = wantedList[0].type, subsPool = data[type].subs;
+    const type = wantedList[0].type, pool = data[type].subs;
     const showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
+    
     for(let i=0; i<amount; i++) {
         totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
         const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.random() < 0.5 ? 2 : 3;
         let rS2, rS3;
         while(true) {
-            rS2 = subsPool[Math.floor(Math.random()*subsPool.length)];
-            rS3 = subsPool[Math.floor(Math.random()*subsPool.length)];
+            rS2 = pool[Math.floor(Math.random()*pool.length)]; rS3 = pool[Math.floor(Math.random()*pool.length)];
             if(rS2 !== rS3 && !exclusions.some(ex => ex.includes(rS2) && ex.includes(rS3))) break;
         }
         const rollVal = (s) => { const r = data[type].ranges[s]; return Math.floor(Math.random() * (Math.max(r[0], r[1]) - Math.min(r[0], r[1]) + 1)) + Math.min(r[0], r[1]); };
         const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
         let isWin = false, isClose = false;
         wantedList.forEach(t => {
-            const statsMatch = (rS1 === t.s1) && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2));
-            if (statsMatch) {
+            if ((rS1 === t.s1) && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2))) {
                 const checkV = (rs, rv, ts, tv) => { const r = data[type].ranges[ts]; return (r[1] < r[0]) ? rv <= tv : rv >= tv; };
-                const valuesMatch = (rV1 >= t.v1) && ((checkV(rS2, rV2, t.s2, t.v2) && checkV(rS3, rV3, t.s3, t.v3)) || (checkV(rS2, rV2, t.s3, t.v3) && checkV(rS3, rV3, t.s2, t.v2)));
-                if (valuesMatch) isWin = true; else isClose = true;
+                if ((rV1 >= t.v1) && ((checkV(rS2, rV2, t.s2, t.v2) && checkV(rS3, rV3, t.s3, t.v3)) || (checkV(rS2, rV2, t.s3, t.v3) && checkV(rS3, rV3, t.s2, t.v2)))) isWin = true; else isClose = true;
             }
         });
         const gTag = `<span class="log-gold ${showLogGold ? '' : 'hidden'}">[-${(cost*goldVal).toLocaleString()}g]</span>`;
-        const suf2 = data[type].ranges[rS2][2], suf3 = data[type].ranges[rS3][2];
-        const div = document.createElement("div");
-        if (isWin) {
-            totalWins++; div.className = "log-entry success";
-            div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3} - HIT!`;
-            document.getElementById("allLog").prepend(div); document.getElementById("winLog").prepend(div.cloneNode(true));
-            updateStatsUI(); if(stop) break;
-        } else {
-            if (isClose) {
-                totalClose++; div.className = "log-entry close-hit";
-                div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3} - CLOSE!`;
-                document.getElementById("closeLog").prepend(div.cloneNode(true));
-            } else {
-                div.className = "log-entry fail"; div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${suf2} | ${rS3} ${rV3}${suf3}`;
-            }
-            document.getElementById("allLog").prepend(div); updateBasicCounters();
-        }
+        const div = document.createElement("div"); div.className = "log-entry " + (isWin ? "success" : isClose ? "close-hit" : "fail");
+        div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${data[type].ranges[rS2][2]} | ${rS3} ${rV3}${data[type].ranges[rS3][2]}` + (isWin ? " - HIT!" : isClose ? " - CLOSE!" : "");
+        document.getElementById("allLog").prepend(div);
+        if (isWin) { totalWins++; document.getElementById("winLog").prepend(div.cloneNode(true)); updateStatsUI(); if(stop) break; }
+        else { if(isClose) { totalClose++; document.getElementById("closeLog").prepend(div.cloneNode(true)); } updateBasicCounters(); }
     }
 }
 
@@ -459,8 +413,7 @@ function updateStatsUI() {
 function toggleGoldUI() {
     const show = document.getElementById("toggleGold").checked;
     document.querySelectorAll(".gold-element").forEach(el => el.classList.toggle("hidden", !show));
-    document.getElementById("toggleLogGold").disabled = !show;
-    toggleLogGoldUI();
+    document.getElementById("toggleLogGold").disabled = !show; toggleLogGoldUI();
 }
 
 function toggleLogGoldUI() {
@@ -469,17 +422,15 @@ function toggleLogGoldUI() {
 }
 
 function switchLog(t) {
-    document.getElementById("allTab").classList.toggle("active", t==='all');
-    document.getElementById("closeTab").classList.toggle("active", t==='close');
-    document.getElementById("winTab").classList.toggle("active", t==='win');
-    document.getElementById("allLog").classList.toggle("hidden", t!=='all');
-    document.getElementById("closeLog").classList.toggle("hidden", t!=='close');
-    document.getElementById("winLog").classList.toggle("hidden", t!=='win');
+    ["all","close","win"].forEach(id => {
+        document.getElementById(id+"Tab").classList.toggle("active", t===id);
+        document.getElementById(id+"Log").classList.toggle("hidden", t!==id);
+    });
 }
 
 function clearLog() {
     totalCrafts = totalWins = totalMats = totalGold = totalClose = 0;
-    document.getElementById("allLog").innerHTML = ""; document.getElementById("winLog").innerHTML = ""; document.getElementById("closeLog").innerHTML = "";
+    ["allLog","winLog","closeLog"].forEach(id => document.getElementById(id).innerHTML = "");
     document.getElementById("avgMats").innerText = "--"; document.getElementById("avgGold").innerText = "--";
     updateBasicCounters();
 }
