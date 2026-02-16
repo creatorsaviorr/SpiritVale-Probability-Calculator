@@ -201,7 +201,8 @@ let wantedList = [];
 let totalCrafts = 0, totalMats = 0, totalWins = 0, totalGold = 0, totalClose = 0;
 
 function blockSpecialChars(e) {
-    if (["e", "E", "+", "-"].includes(e.key)) e.preventDefault();
+    // Blocks e (scientific notation), +, -, and . (decimal points)
+    if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
 }
 
 function validateIntegerInput(el, min) {
