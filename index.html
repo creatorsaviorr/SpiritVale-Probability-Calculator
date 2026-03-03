@@ -200,16 +200,10 @@ const presets = {
 let wantedList = [];
 let totalCrafts = 0, totalMats = 0, totalWins = 0, totalGold = 0, totalClose = 0;
 
-function blockSpecialChars(e) {
-    // Blocks e (scientific notation), +, -, and . (decimal points)
-    if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
-}
+function blockSpecialChars(e) { if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault(); }
 
 function validateIntegerInput(el, min) {
-    if (el.value === "") {
-        calculateCombinedOdds();
-        return;
-    }
+    if (el.value === "") { calculateCombinedOdds(); return; }
     let val = Math.round(parseFloat(el.value));
     if (isNaN(val) || val < min) val = min;
     el.value = val;
@@ -264,16 +258,22 @@ function updateLineRange(lineId, forceVal = null) {
 
 function getIndividualProb(type, s1, v1, s2, v2, s3, v3) {
     const subs = data[type].subs;
+    const p1 = (v1 === 3) ? (1/12) : (2/12);
     let validPairs = 0;
     for(let i=0; i<subs.length; i++) {
-        for(let j=i+1; j<subs.length; j++) if(!exclusions.some(ex => ex.includes(subs[i]) && ex.includes(subs[j]))) validPairs++;
+        for(let j=i+1; j<subs.length; j++) {
+            if(!exclusions.some(ex => ex.includes(subs[i]) && ex.includes(subs[j]))) validPairs++;
+        }
     }
-    const p1 = (v1 === 3) ? (1/12) : (2/12);
-    const getRangeProb = (s, v) => {
+    const getRangeSuccesses = (s, v) => {
         const r = data[type].ranges[s];
-        return (Math.abs(r[1] - v) + 1) / (Math.abs(r[1] - r[0]) + 1);
+        return Math.abs(r[1] - v) + 1;
     };
-    return p1 * (1/validPairs) * getRangeProb(s2, v2) * getRangeProb(s3, v3);
+    const getRangeTotal = (s) => {
+        const r = data[type].ranges[s];
+        return Math.abs(r[1] - r[0]) + 1;
+    };
+    return p1 * (1/validPairs) * (getRangeSuccesses(s2, v2) / getRangeTotal(s2)) * (getRangeSuccesses(s3, v3) / getRangeTotal(s3));
 }
 
 function calculateSingle() {
@@ -297,88 +297,57 @@ function calculateSingle() {
     }
 }
 
-function addTarget() {
-    const type = document.getElementById("itemType").value;
-    const s1 = document.getElementById("line1Stat").value, v1 = parseInt(document.getElementById("line1Val").value);
-    const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
-    const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
-    
-    if (wantedList.length > 0 && wantedList[0].type !== type) { alert("Please clear variants before switching Item Types."); return; }
-    
-    const isDuplicate = wantedList.some(t => {
-        const mainMatch = (t.s1 === s1 && t.v1 === v1);
-        const subMatch = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3) || 
-                         (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
-        return mainMatch && subMatch;
-    });
-
-    if (isDuplicate) { alert("This variant is already in your list."); return; }
-    
-    wantedList.push({ type, s1, v1, s2, v2, s3, v3, id: Date.now() });
-    renderWantedList();
-}
-
-function renderWantedList() {
-    const container = document.getElementById("targetList");
-    const simBtn = document.getElementById("simBtn");
-    
+function calculateCombinedOdds() {
     if(wantedList.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>';
-        simBtn.disabled = true; 
-        simBtn.innerText = "Add a Variant to Start";
         document.getElementById("combinedLabel").innerText = "Combined chance to hit ANY variant in list or better:";
-        document.getElementById("combinedOdds").innerText = "---";
-        document.getElementById("combinedPercent").innerText = "0%";
-        document.getElementById("prepGuide").classList.add("hidden"); 
+        document.getElementById("combinedOdds").innerText = "---"; document.getElementById("combinedPercent").innerText = "0%";
         return;
     }
-    
-    simBtn.disabled = false; 
-    simBtn.innerText = "Roll"; 
-    container.innerHTML = "";
-    
-    wantedList.forEach(t => {
-        const div = document.createElement("div"); div.className = "target-card";
-        div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${data[t.type].ranges[t.s2][2]} | ${t.s3} ${t.v3}${data[t.type].ranges[t.s3][2]}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
-        container.appendChild(div);
-    });
-    calculateCombinedOdds();
-}
 
-function clearWantedList() { wantedList = []; renderWantedList(); }
-function removeTarget(id) { wantedList = wantedList.filter(t => t.id !== id); renderWantedList(); }
+    const type = wantedList[0].type;
+    const pool = data[type].subs;
+    let allPerfect = true;
+    let validPairsCount = 0;
+    for(let i=0; i<pool.length; i++) {
+        for(let j=i+1; j<pool.length; j++) {
+            if(!exclusions.some(ex => ex.includes(pool[i]) && ex.includes(pool[j]))) validPairsCount++;
+        }
+    }
 
-function calculateCombinedOdds() {
-    if(wantedList.length === 0) return;
-    const uniqueGroups = {}; let allPerfect = true;
+    const pairGroups = {};
     wantedList.forEach(t => {
-        const comboKey = [t.s1, t.s2, t.s3].sort().join("|");
-        const prob = getIndividualProb(t.type, t.s1, t.v1, t.s2, t.v2, t.s3, t.v3);
-        if(!uniqueGroups[comboKey] || prob > uniqueGroups[comboKey]) uniqueGroups[comboKey] = prob;
-        if (!(t.v1 === 3 && t.v2 == data[t.type].ranges[t.s2][1] && t.v3 == data[t.type].ranges[t.s3][1])) allPerfect = false;
+        const isEntryPerfect = (t.v1 === 3 && t.v2 == data[type].ranges[t.s2][1] && t.v3 == data[type].ranges[t.s3][1]);
+        if (!isEntryPerfect) allPerfect = false;
+
+        const sortedPair = [t.s2, t.s3].sort();
+        const key = `${t.s1}:${sortedPair[0]}:${sortedPair[1]}`;
+        if(!pairGroups[key]) pairGroups[key] = { v1: t.v1, coords: new Set() };
+        if(t.v1 < pairGroups[key].v1) pairGroups[key].v1 = t.v1;
+
+        const r2 = data[type].ranges[t.s2], r3 = data[type].ranges[t.s3];
+        const step2 = r2[1] >= r2[0] ? 1 : -1, step3 = r3[1] >= r3[0] ? 1 : -1;
+        for(let v2 = t.v2; v2 !== r2[1] + step2; v2 += step2) {
+            for(let v3 = t.v3; v3 !== r3[1] + step3; v3 += step3) {
+                const coord = (t.s2 === sortedPair[0]) ? `${v2},${v3}` : `${v3},${v2}`;
+                pairGroups[key].coords.add(coord);
+            }
+        }
     });
-    let probFailAll = 1; Object.values(uniqueGroups).forEach(p => probFailAll *= (1 - p));
-    const win = 1 - probFailAll;
+
+    let totalProb = 0;
+    for(const key in pairGroups) {
+        const group = pairGroups[key];
+        const [s1, s2, s3] = key.split(':');
+        const p1 = (group.v1 === 3) ? (1/12) : (2/12);
+        const totalPossibleSpace = (Math.abs(data[type].ranges[s2][1] - data[type].ranges[s2][0]) + 1) * (Math.abs(data[type].ranges[s3][1] - data[type].ranges[s3][0]) + 1);
+        totalProb += p1 * (1/validPairsCount) * (group.coords.size / totalPossibleSpace);
+    }
+
+    const win = Math.min(totalProb, 1);
     document.getElementById("combinedLabel").innerText = allPerfect ? "Combined chance to get ANY of these PERFECT variants:" : "Combined chance to hit ANY variant in list or better:";
     document.getElementById("combinedOdds").innerText = "1 in " + Math.round(1/win).toLocaleString();
     document.getElementById("combinedPercent").innerText = (win * 100).toFixed(6) + "%";
     updatePrepGuide(win);
-}
-
-function updatePrepGuide(p) {
-    const body = document.getElementById("prepBody");
-    const matCost = parseInt(document.getElementById("matCost").value);
-    const goldInput = document.getElementById("goldVal").value;
-    const goldVal = (goldInput === "" || isNaN(goldInput)) ? 0 : parseInt(goldInput);
-    
-    document.getElementById("prepGuide").classList.remove("hidden"); body.innerHTML = "";
-    [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
-        let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
-        let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
-        const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
-        tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${(n * matCost).toLocaleString()}</td><td class="gold-text">${formatGoldTable(n * matCost * goldVal)}</td>`;
-        body.appendChild(tr);
-    });
 }
 
 function runSimulation() {
@@ -391,21 +360,26 @@ function runSimulation() {
     
     for(let i=0; i<amount; i++) {
         totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
-        const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.random() < 0.5 ? 2 : 3;
+        const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.floor(Math.random() * 2) + 2; 
         let rS2, rS3;
         while(true) {
             rS2 = pool[Math.floor(Math.random()*pool.length)]; rS3 = pool[Math.floor(Math.random()*pool.length)];
             if(rS2 !== rS3 && !exclusions.some(ex => ex.includes(rS2) && ex.includes(rS3))) break;
         }
-        const rollVal = (s) => { const r = data[type].ranges[s]; return Math.floor(Math.random() * (Math.max(r[0], r[1]) - Math.min(r[0], r[1]) + 1)) + Math.min(r[0], r[1]); };
+        const rollVal = (s) => { const r = data[type].ranges[s]; const min = Math.min(r[0], r[1]), max = Math.max(r[0], r[1]); return Math.floor(Math.random() * (max - min + 1)) + min; };
         const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
+        
         let isWin = false, isClose = false;
         wantedList.forEach(t => {
-            if ((rS1 === t.s1) && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2))) {
-                const checkV = (rs, rv, ts, tv) => { const r = data[type].ranges[ts]; return (r[1] < r[0]) ? rv <= tv : rv >= tv; };
-                if ((rV1 >= t.v1) && ((checkV(rS2, rV2, t.s2, t.v2) && checkV(rS3, rV3, t.s3, t.v3)) || (checkV(rS2, rV2, t.s3, t.v3) && checkV(rS3, rV3, t.s2, t.v2)))) isWin = true; else isClose = true;
+            const matchS1 = (rS1 === t.s1);
+            const matchPair = (rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2);
+            if (matchS1 && matchPair) {
+                const checkV = (rv, tv, sName) => { const r = data[type].ranges[sName]; return (r[1] > r[0]) ? rv >= tv : rv <= tv; };
+                const tv2 = (rS2 === t.s2) ? t.v2 : t.v3, tv3 = (rS3 === t.s3) ? t.v3 : t.v2;
+                if (rV1 >= t.v1 && checkV(rV2, tv2, rS2) && checkV(rV3, tv3, rS3)) isWin = true; else isClose = true;
             }
         });
+
         const gTag = `<span class="log-gold ${showLogGold ? '' : 'hidden'}">[-${(cost*goldVal).toLocaleString()}g]</span>`;
         const div = document.createElement("div"); div.className = "log-entry " + (isWin ? "success" : isClose ? "close-hit" : "fail");
         div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${data[type].ranges[rS2][2]} | ${rS3} ${rV3}${data[type].ranges[rS3][2]}` + (isWin ? " - HIT!" : isClose ? " - CLOSE!" : "");
@@ -413,6 +387,57 @@ function runSimulation() {
         if (isWin) { totalWins++; document.getElementById("winLog").prepend(div.cloneNode(true)); updateStatsUI(); if(stop) break; }
         else { if(isClose) { totalClose++; document.getElementById("closeLog").prepend(div.cloneNode(true)); } updateBasicCounters(); }
     }
+}
+
+function addTarget() {
+    const type = document.getElementById("itemType").value;
+    const s1 = document.getElementById("line1Stat").value, v1 = parseInt(document.getElementById("line1Val").value);
+    const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
+    const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
+    if (wantedList.length > 0 && wantedList[0].type !== type) { alert("Please clear variants before switching Item Types."); return; }
+    const isDuplicate = wantedList.some(t => {
+        const subMatch = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3) || (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
+        return (t.s1 === s1 && t.v1 === v1) && subMatch;
+    });
+    if (isDuplicate) { alert("This variant is already in your list."); return; }
+    wantedList.push({ type, s1, v1, s2, v2, s3, v3, id: Date.now() });
+    renderWantedList();
+}
+
+function renderWantedList() {
+    const container = document.getElementById("targetList");
+    const simBtn = document.getElementById("simBtn");
+    if(wantedList.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>';
+        simBtn.disabled = true; simBtn.innerText = "Add a Variant to Start";
+        calculateCombinedOdds(); 
+        document.getElementById("prepGuide").classList.add("hidden"); return;
+    }
+    simBtn.disabled = false; simBtn.innerText = "Roll"; container.innerHTML = "";
+    wantedList.forEach(t => {
+        const div = document.createElement("div"); div.className = "target-card";
+        div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${data[t.type].ranges[t.s2][2]} | ${t.s3} ${t.v3}${data[t.type].ranges[t.s3][2]}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
+        container.appendChild(div);
+    });
+    calculateCombinedOdds();
+}
+
+function clearWantedList() { wantedList = []; renderWantedList(); }
+function removeTarget(id) { wantedList = wantedList.filter(t => t.id !== id); renderWantedList(); }
+
+function updatePrepGuide(p) {
+    const body = document.getElementById("prepBody");
+    const matCost = parseInt(document.getElementById("matCost").value);
+    const goldInput = document.getElementById("goldVal").value;
+    const goldVal = (goldInput === "" || isNaN(goldInput)) ? 0 : parseInt(goldInput);
+    document.getElementById("prepGuide").classList.remove("hidden"); body.innerHTML = "";
+    [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
+        let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
+        let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
+        const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
+        tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${(n * matCost).toLocaleString()}</td><td class="gold-text">${formatGoldTable(n * matCost * goldVal)}</td>`;
+        body.appendChild(tr);
+    });
 }
 
 function updateBasicCounters() {
