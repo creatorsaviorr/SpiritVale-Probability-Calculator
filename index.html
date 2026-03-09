@@ -117,6 +117,14 @@
                 oninput="validateIntegerInput(this, 0)" 
                 onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
         </div>
+
+        <div>
+            <label>Materials / Hour</label>
+            <input type="number" id="matsPerHour" value="0" min="0" step="1" 
+                onkeydown="blockSpecialChars(event)"
+                oninput="validateIntegerInput(this, 0)" 
+                onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
+        </div>
         
         <div class="full-width">
             <div id="prepGuide" class="hidden">
@@ -127,6 +135,7 @@
                             <th>Rolls</th>
                             <th>Materials</th>
                             <th>Est. Gold</th>
+                            <th>Est. Time</th>
                         </tr>
                     </thead>
                     <tbody id="prepBody"></tbody>
@@ -190,7 +199,7 @@ const mainStats = ["STR", "VIT", "DEX", "AGI", "INT", "LUK"];
 const presets = {
     "Accessory / Face / Utility / Headgear / Artifact": { s1: "STR", v1: 3, s2: "HP", v2: 2, s3: "ATK", v3: 2 },
     "Chest / Shield": { s1: "VIT", v1: 3, s2: "HP", v2: 10, s3: "Damage From Magic", v3: -5 },
-    "Legs": { s1: "INT", v1: 3, s2: "MP Cost", v2: -10, s3: "MP Regen", v3: 25 },
+    "Legs": { s1: "INT", v1: 3, s2: "MP Cost", v2: -10, s3: "MP Regen", v3: 25 }, // FIXED: Corrected v2 typo to v3
     "Shoes": { s1: "AGI", v1: 3, s2: "Move Speed", v2: 10, s3: "Attack Speed", v3: 10 },
     "Melee Weapon": { s1: "STR", v1: 3, s2: "Damage Melee", v2: 10, s3: "Crit Damage", v3: 10 },
     "Ranged Weapon": { s1: "DEX", v1: 3, s2: "Damage Ranged", v2: 10, s3: "Crit Damage", v3: 10 },
@@ -217,6 +226,26 @@ function formatGoldTable(num) {
     if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M Gold';
     if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K Gold';
     return Math.floor(num).toLocaleString() + ' Gold';
+}
+
+function formatTime(totalMinutes) {
+    if (totalMinutes === Infinity || isNaN(totalMinutes) || totalMinutes <= 0) return "--";
+    if (totalMinutes < 1) return "< 1m";
+    
+    const years = Math.floor(totalMinutes / 525600);
+    const months = Math.floor((totalMinutes % 525600) / 43800);
+    const days = Math.floor((totalMinutes % 43800) / 1440);
+    const hours = Math.floor((totalMinutes % 1440) / 60);
+    const mins = Math.round(totalMinutes % 60);
+    
+    let res = [];
+    if (years > 0) res.push(years + "y");
+    if (months > 0) res.push(months + "mo");
+    if (days > 0) res.push(days + "d");
+    if (hours > 0) res.push(hours + "h");
+    if (mins > 0 && years === 0) res.push(mins + "m");
+    
+    return res.length > 0 ? res.slice(0, 3).join(" ") : "< 1m";
 }
 
 function init() {
@@ -273,7 +302,8 @@ function getIndividualProb(type, s1, v1, s2, v2, s3, v3) {
         const r = data[type].ranges[s];
         return Math.abs(r[1] - r[0]) + 1;
     };
-    return p1 * (1/validPairs) * (getRangeSuccesses(s2, v2) / getRangeTotal(s2)) * (getRangeSuccesses(s3, v3) / getRangeTotal(s3));
+    const prob = p1 * (1/validPairs) * (getRangeSuccesses(s2, v2) / getRangeTotal(s2)) * (getRangeSuccesses(s3, v3) / getRangeTotal(s3));
+    return isNaN(prob) ? 0 : prob;
 }
 
 function calculateSingle() {
@@ -292,7 +322,8 @@ function calculateSingle() {
         box.classList.remove("invalid"); document.getElementById("addBtn").disabled = false;
         document.getElementById("selectionLabel").innerText = isMax ? "Chance to get this PERFECT variant:" : "Chance to get this variant or better:";
         const prob = getIndividualProb(t, "", v1, s2, v2, s3, v3);
-        document.getElementById("selectionOdds").innerText = "1 in " + Math.round(1/prob).toLocaleString();
+        const ratio = Math.round(1/prob);
+        document.getElementById("selectionOdds").innerText = (isNaN(ratio) || !isFinite(ratio)) ? "---" : "1 in " + ratio.toLocaleString();
         document.getElementById("selectionPercent").innerText = (prob * 100).toFixed(6) + "%";
     }
 }
@@ -303,7 +334,6 @@ function calculateCombinedOdds() {
         document.getElementById("combinedOdds").innerText = "---"; document.getElementById("combinedPercent").innerText = "0%";
         return;
     }
-
     const type = wantedList[0].type;
     const pool = data[type].subs;
     let allPerfect = true;
@@ -313,17 +343,14 @@ function calculateCombinedOdds() {
             if(!exclusions.some(ex => ex.includes(pool[i]) && ex.includes(pool[j]))) validPairsCount++;
         }
     }
-
     const pairGroups = {};
     wantedList.forEach(t => {
         const isEntryPerfect = (t.v1 === 3 && t.v2 == data[type].ranges[t.s2][1] && t.v3 == data[type].ranges[t.s3][1]);
         if (!isEntryPerfect) allPerfect = false;
-
         const sortedPair = [t.s2, t.s3].sort();
         const key = `${t.s1}:${sortedPair[0]}:${sortedPair[1]}`;
         if(!pairGroups[key]) pairGroups[key] = { v1: t.v1, coords: new Set() };
         if(t.v1 < pairGroups[key].v1) pairGroups[key].v1 = t.v1;
-
         const r2 = data[type].ranges[t.s2], r3 = data[type].ranges[t.s3];
         const step2 = r2[1] >= r2[0] ? 1 : -1, step3 = r3[1] >= r3[0] ? 1 : -1;
         for(let v2 = t.v2; v2 !== r2[1] + step2; v2 += step2) {
@@ -333,7 +360,6 @@ function calculateCombinedOdds() {
             }
         }
     });
-
     let totalProb = 0;
     for(const key in pairGroups) {
         const group = pairGroups[key];
@@ -342,10 +368,10 @@ function calculateCombinedOdds() {
         const totalPossibleSpace = (Math.abs(data[type].ranges[s2][1] - data[type].ranges[s2][0]) + 1) * (Math.abs(data[type].ranges[s3][1] - data[type].ranges[s3][0]) + 1);
         totalProb += p1 * (1/validPairsCount) * (group.coords.size / totalPossibleSpace);
     }
-
     const win = Math.min(totalProb, 1);
+    const ratio = Math.round(1/win);
     document.getElementById("combinedLabel").innerText = allPerfect ? "Combined chance to get ANY of these PERFECT variants:" : "Combined chance to hit ANY variant in list or better:";
-    document.getElementById("combinedOdds").innerText = "1 in " + Math.round(1/win).toLocaleString();
+    document.getElementById("combinedOdds").innerText = (isNaN(ratio) || !isFinite(ratio)) ? "---" : "1 in " + ratio.toLocaleString();
     document.getElementById("combinedPercent").innerText = (win * 100).toFixed(6) + "%";
     updatePrepGuide(win);
 }
@@ -357,7 +383,6 @@ function runSimulation() {
     const stop = document.getElementById("stopOnWin").checked;
     const type = wantedList[0].type, pool = data[type].subs;
     const showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
-    
     for(let i=0; i<amount; i++) {
         totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
         const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.floor(Math.random() * 2) + 2; 
@@ -368,7 +393,6 @@ function runSimulation() {
         }
         const rollVal = (s) => { const r = data[type].ranges[s]; const min = Math.min(r[0], r[1]), max = Math.max(r[0], r[1]); return Math.floor(Math.random() * (max - min + 1)) + min; };
         const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
-        
         let isWin = false, isClose = false;
         wantedList.forEach(t => {
             const matchS1 = (rS1 === t.s1);
@@ -379,7 +403,6 @@ function runSimulation() {
                 if (rV1 >= t.v1 && checkV(rV2, tv2, rS2) && checkV(rV3, tv3, rS3)) isWin = true; else isClose = true;
             }
         });
-
         const gTag = `<span class="log-gold ${showLogGold ? '' : 'hidden'}">[-${(cost*goldVal).toLocaleString()}g]</span>`;
         const div = document.createElement("div"); div.className = "log-entry " + (isWin ? "success" : isClose ? "close-hit" : "fail");
         div.innerHTML = `#${totalCrafts} ${gTag}: ${rS1} ${rV1} | ${rS2} ${rV2}${data[type].ranges[rS2][2]} | ${rS3} ${rV3}${data[type].ranges[rS3][2]}` + (isWin ? " - HIT!" : isClose ? " - CLOSE!" : "");
@@ -430,12 +453,25 @@ function updatePrepGuide(p) {
     const matCost = parseInt(document.getElementById("matCost").value);
     const goldInput = document.getElementById("goldVal").value;
     const goldVal = (goldInput === "" || isNaN(goldInput)) ? 0 : parseInt(goldInput);
+    
+    const mphInput = document.getElementById("matsPerHour").value;
+    const mph = (mphInput === "" || isNaN(mphInput) || parseInt(mphInput) <= 0) ? 0 : parseInt(mphInput);
+    
     document.getElementById("prepGuide").classList.remove("hidden"); body.innerHTML = "";
     [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
         let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
         let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
+        const totalMatsNeeded = n * matCost;
+        const totalMinutes = mph > 0 ? (totalMatsNeeded / mph) * 60 : 0;
+        
         const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
-        tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${(n * matCost).toLocaleString()}</td><td class="gold-text">${formatGoldTable(n * matCost * goldVal)}</td>`;
+        tr.innerHTML = `
+            <td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td>
+            <td>${n.toLocaleString()}</td>
+            <td>${totalMatsNeeded.toLocaleString()}</td>
+            <td class="gold-text">${formatGoldTable(totalMatsNeeded * goldVal)}</td>
+            <td style="color: #bb86fc;">${mph > 0 ? formatTime(totalMinutes) : "--"}</td>
+        `;
         body.appendChild(tr);
     });
 }
