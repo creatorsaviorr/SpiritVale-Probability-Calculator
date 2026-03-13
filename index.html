@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<meta name='viewport' content='width=device-width, initial-scale=1'/><meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -69,13 +69,13 @@
     <label>Line 2 Substat</label>
     <div style="display:flex; gap:10px; margin-bottom:5px;">
         <select id="line2Stat" onchange="updateLineRange('line2')"></select>
-        <select id="line2Val" onchange="calculateSingle()"></select>
+        <select id="line2Val" onchange="calculateLine2Select()"></select>
     </div>
 
     <label>Line 3 Substat</label>
     <div style="display:flex; gap:10px;">
         <select id="line3Stat" onchange="updateLineRange('line3')"></select>
-        <select id="line3Val" onchange="calculateSingle()"></select>
+        <select id="line3Val" onchange="calculateLine3Select()"></select>
     </div>
 
     <div id="selectionBox" class="result-box">
@@ -103,8 +103,14 @@
 </div>
 
 <div class="card">
-    <h2>Roll Simulator</h2>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+    <h2>Simulator Hub</h2>
+    <div class="tab-container" style="margin-bottom: 20px;">
+        <div id="craftModeTab" class="tab active" onclick="switchSimMode('crafting')">Crafting</div>
+        <div id="farmModeTab" class="tab" onclick="switchSimMode('farming')">Farming</div>
+        <div id="hybridModeTab" class="tab" onclick="switchSimMode('hybrid')">Hybrid View</div>
+    </div>
+
+    <div id="craftingInputs" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
         <div><label>Materials / Roll</label>
             <select id="matCost" onchange="calculateCombinedOdds()">
                 <option value="25">25</option><option value="50">50</option><option value="75">75</option><option value="100">100</option><option value="150">150</option><option value="200" selected>200</option>
@@ -112,43 +118,25 @@
         </div>
         <div>
             <label id="goldInputLabel">Gold / Material</label>
-            <input type="number" id="goldVal" value="1000" min="0" step="1" 
-                onkeydown="blockSpecialChars(event)"
-                oninput="validateIntegerInput(this, 0)" 
-                onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
+            <input type="number" id="goldVal" value="1000" min="0" step="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 0)" onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
         </div>
-
         <div>
             <label>Materials / Hour</label>
-            <input type="number" id="matsPerHour" value="0" min="0" step="1" 
-                onkeydown="blockSpecialChars(event)"
-                oninput="validateIntegerInput(this, 0)" 
-                onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
+            <input type="number" id="matsPerHour" value="0" min="0" step="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 0)" onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
         </div>
-        
         <div class="full-width">
-            <div id="prepGuide" class="hidden">
+            <div id="prepGuide">
                 <table class="prep-table">
                     <thead>
-                        <tr>
-                            <th>Confidence</th>
-                            <th>Rolls</th>
-                            <th>Materials</th>
-                            <th>Est. Gold</th>
-                            <th>Est. Time</th>
-                        </tr>
+                        <tr><th>Confidence</th><th>Rolls</th><th>Materials</th><th>Est. Gold</th><th>Est. Time</th></tr>
                     </thead>
                     <tbody id="prepBody"></tbody>
                 </table>
             </div>
         </div>
-
         <div>
             <label>Auto-Roll Amount</label>
-            <input type="number" id="rollAmount" value="1" min="1" step="1" 
-                onkeydown="blockSpecialChars(event)"
-                oninput="validateIntegerInput(this, 1)" 
-                onblur="if(this.value==='') this.value=1;">
+            <input type="number" id="rollAmount" value="1" min="1" step="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 1)" onblur="if(this.value==='') this.value=1;">
         </div>
         <div class="checkbox-group">
             <label class="check-label"><input type="checkbox" id="stopOnWin"> Stop on Success</label>
@@ -157,7 +145,58 @@
         </div>
     </div>
 
-    <div class="stats-grid">
+    <div id="farmingInputs" class="hidden" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+        <div>
+            <label>Kills / Minute</label>
+            <input type="number" id="killsPerMin" value="15" min="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 1)" onblur="if(this.value==='') { this.value=1; calculateFarmOdds(); }">
+        </div>
+        <div>
+            <label>Drop Chance %</label>
+            <input type="number" id="baseDropChance" value="1.0" min="0" step="0.1" oninput="calculateFarmOdds()">
+        </div>
+        <div class="full-width" style="display: flex; align-items: flex-end; gap: 10px; justify-content: center; margin-top: 10px;">
+            <div style="flex: 1;"><label>Target Mobs</label><input type="number" id="targetMobs" value="1" min="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 1); syncMobInputs('target');" onblur="syncMobInputs('blur');"></div>
+            <div style="padding-bottom: 22px; font-weight: bold; color: #777;">out of</div>
+            <div style="flex: 1;"><label>Total Mobs</label><input type="number" id="totalMobs" value="1" min="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 1); syncMobInputs('total');" onblur="syncMobInputs('blur');"></div>
+        </div>
+        <div class="full-width">
+            <div id="farmPrepGuide">
+                <table class="prep-table">
+                    <thead>
+                        <tr><th>Confidence</th><th>Total Kills</th><th>Item Drops</th><th>Est. Time</th></tr>
+                    </thead>
+                    <tbody id="farmPrepBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div>
+            <label>Auto-Farm Amount</label>
+            <input type="number" id="farmAmount" value="100" min="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 1)" onblur="if(this.value==='') { this.value=1; }">
+        </div>
+        <div class="checkbox-group">
+            <label class="check-label"><input type="checkbox" id="stopOnFarmWin"> Stop on Success</label>
+        </div>
+    </div>
+
+    <div id="hybridView" class="hidden">
+        <p style="font-size: 0.8em; color: #888; text-align: center; margin-bottom: 15px;">
+            This estimate combines the probability of hitting your item via monster drops <b>and</b> material crafting simultaneously.
+        </p>
+        <table class="prep-table">
+            <thead>
+                <tr>
+                    <th>Confidence Level</th>
+                    <th>Est. Combined Time</th>
+                </tr>
+            </thead>
+            <tbody id="combinedEfficiencyBody"></tbody>
+        </table>
+        <p style="font-size: 0.7em; color: #555; text-align: center; margin-top: 10px;">
+            Adjust Kills/Min and Materials/Hour in the other tabs to update these times.
+        </p>
+    </div>
+
+    <div id="craftStats" class="stats-grid">
         <div>Total Rolls<b id="totalCrafts">0</b></div>
         <div>Successful<b id="totalWins" style="color:#03dac6">0</b></div>
         <div class="full-width">Close Hits (Right Stats)<b id="totalClose" class="amber-text">0</b></div>
@@ -167,19 +206,45 @@
         <div class="full-width gold-element">Average Gold / Success<b id="avgGold" class="gold-text">--</b></div>
     </div>
 
-    <hr style="border:0; border-top:1px solid #333; margin: 25px 0;">
+    <div id="farmStats" class="stats-grid hidden">
+        <div>Total Kills<b id="totalKills">0</b></div>
+        <div>Successful Drops<b id="farmWins" style="color:#03dac6">0</b></div>
+        <div class="full-width">Close Drops (Right Stats)<b id="farmClose" class="amber-text">0</b></div>
+        <div class="full-width">Total Drops<b id="totalDrops">0</b></div>
+        <div class="full-width">Time Spent<b id="farmTimeSpent">0m</b></div>
+        <div class="full-width">Average Kills / Success<b id="avgKillsPerWin">--</b></div>
+        <div class="full-width">Average Drops / Success<b id="avgDropsPerWin">--</b></div>
+        <div class="full-width">Average Time / Success<b id="avgFarmTime">--</b></div>
+    </div>
+
+    <hr id="simDivider" style="border:0; border-top:1px solid #333; margin: 25px 0;">
 
     <button id="simBtn" class="btn btn-teal" onclick="runSimulation()" disabled>Add a Variant to Start</button>
+    <button id="farmBtn" class="btn btn-teal hidden" onclick="runFarmSimulation()" disabled>Add a Variant to Start</button>
 
-    <div class="tab-container">
-        <div id="allTab" class="tab active" onclick="switchLog('all')">All Logs</div>
-        <div id="closeTab" class="tab" onclick="switchLog('close')">Close Hits</div>
-        <div id="winTab" class="tab" onclick="switchLog('win')">Successes</div>
+    <div id="craftLogs">
+        <div class="tab-container">
+            <div id="allTab" class="tab active" onclick="switchLog('all')">All Logs</div>
+            <div id="closeTab" class="tab" onclick="switchLog('close')">Close Hits</div>
+            <div id="winTab" class="tab" onclick="switchLog('win')">Successes</div>
+        </div>
+        <div id="allLog" class="log-container"></div>
+        <div id="closeLog" class="log-container hidden"></div>
+        <div id="winLog" class="log-container hidden"></div>
+        <button style="width:100%; background:none; border:none; color:#ff7597; cursor:pointer; font-size:0.75em; margin-top:10px;" onclick="clearLog()">Clear Roll Stats & Logs</button>
     </div>
-    <div id="allLog" class="log-container"></div>
-    <div id="closeLog" class="log-container hidden"></div>
-    <div id="winLog" class="log-container hidden"></div>
-    <button style="width:100%; background:none; border:none; color:#ff7597; cursor:pointer; font-size:0.75em; margin-top:10px;" onclick="clearLog()">Clear Stats & Logs</button>
+
+    <div id="farmLogs" class="hidden">
+        <div class="tab-container">
+            <div id="farmAllTab" class="tab active" onclick="switchFarmLog('all')">All Logs</div>
+            <div id="farmCloseTab" class="tab" onclick="switchFarmLog('close')">Close Hits</div>
+            <div id="farmWinTab" class="tab" onclick="switchFarmLog('win')">Successes</div>
+        </div>
+        <div id="farmAllLog" class="log-container"></div>
+        <div id="farmCloseLog" class="log-container hidden"></div>
+        <div id="farmWinLog" class="log-container hidden"></div>
+        <button style="width:100%; background:none; border:none; color:#ff7597; cursor:pointer; font-size:0.75em; margin-top:10px;" onclick="clearFarmLog()">Clear Farm Stats & Logs</button>
+    </div>
 </div>
 
 <script>
@@ -192,25 +257,24 @@ const data = {
     "Ranged Weapon": { subs: ["ATK", "MATK", "Damage Ranged", "Damage Magic", "Crit", "Crit Damage", "Health Leech"], ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Ranged":[7,10,"%"], "Damage Magic":[7,10,"%"], "Crit":[7,10,""], "Crit Damage":[7,10,"%"], "Health Leech":[3,5,"%"] } },
     "Magic Weapon": { subs: ["ATK", "MATK", "Damage Magic", "Damage Melee", "MP Cost", "Healing", "Cast Speed"], ranges: { "ATK":[3,5,"%"], "MATK":[3,5,"%"], "Damage Magic":[7,10,"%"], "Damage Melee":[7,10,"%"], "MP Cost":[-7,-10,"%"], "Healing":[7,10,"%"], "Cast Speed":[7,10,"%"] } }
 };
-
 const exclusions = [["ATK", "MATK"], ["Damage Melee", "Damage Magic", "Damage Ranged"], ["DEF", "MDEF"], ["Damage From Melee", "Damage From Magic"], ["HP", "MP"], ["HP Regen", "MP Regen"]];
 const mainStats = ["STR", "VIT", "DEX", "AGI", "INT", "LUK"];
 
 const presets = {
     "Accessory / Face / Utility / Headgear / Artifact": { s1: "STR", v1: 3, s2: "HP", v2: 2, s3: "ATK", v3: 2 },
     "Chest / Shield": { s1: "VIT", v1: 3, s2: "HP", v2: 10, s3: "Damage From Magic", v3: -5 },
-    "Legs": { s1: "INT", v1: 3, s2: "MP Cost", v2: -10, s3: "MP Regen", v3: 25 }, // FIXED: Corrected v2 typo to v3
+    "Legs": { s1: "INT", v1: 3, s2: "MP Cost", v2: -10, s3: "MP Regen", v3: 25 },
     "Shoes": { s1: "AGI", v1: 3, s2: "Move Speed", v2: 10, s3: "Attack Speed", v3: 10 },
     "Melee Weapon": { s1: "STR", v1: 3, s2: "Damage Melee", v2: 10, s3: "Crit Damage", v3: 10 },
     "Ranged Weapon": { s1: "DEX", v1: 3, s2: "Damage Ranged", v2: 10, s3: "Crit Damage", v3: 10 },
     "Magic Weapon": { s1: "INT", v1: 3, s2: "Damage Magic", v2: 10, s3: "MATK", v3: 5 }
 };
-
 let wantedList = [];
 let totalCrafts = 0, totalMats = 0, totalWins = 0, totalGold = 0, totalClose = 0;
+let globalWinProb = 0;
+let totalKills = 0, farmWins = 0, farmClose = 0, totalDrops = 0;
 
 function blockSpecialChars(e) { if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault(); }
-
 function validateIntegerInput(el, min) {
     if (el.value === "") { calculateCombinedOdds(); return; }
     let val = Math.round(parseFloat(el.value));
@@ -218,46 +282,52 @@ function validateIntegerInput(el, min) {
     el.value = val;
     calculateCombinedOdds();
 }
-
+function syncMobInputs(source) {
+    const targetEl = document.getElementById("targetMobs");
+    const totalEl = document.getElementById("totalMobs");
+    let targetVal = parseInt(targetEl.value) || 1;
+    let totalVal = parseInt(totalEl.value) || 1;
+    if (source === 'target' && targetVal > totalVal) totalEl.value = targetVal;
+    if (source === 'blur') {
+        if (totalVal < targetVal) totalEl.value = targetVal;
+        if (targetEl.value === "") targetEl.value = 1;
+        if (totalEl.value === "") totalEl.value = targetEl.value;
+    }
+    calculateFarmOdds();
+}
 function formatGoldTable(num) {
-    if (num <= 0) return '0 Gold';
+    if (isNaN(num) || !isFinite(num) || num <= 0) return '0 Gold';
     if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T Gold';
     if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B Gold';
     if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M Gold';
     if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K Gold';
     return Math.floor(num).toLocaleString() + ' Gold';
 }
-
 function formatTime(totalMinutes) {
     if (totalMinutes === Infinity || isNaN(totalMinutes) || totalMinutes <= 0) return "--";
-    if (totalMinutes < 1) return "< 1m";
-    
+    if (totalMinutes <= 1) return "< 1m";
     const years = Math.floor(totalMinutes / 525600);
     const months = Math.floor((totalMinutes % 525600) / 43800);
     const days = Math.floor((totalMinutes % 43800) / 1440);
     const hours = Math.floor((totalMinutes % 1440) / 60);
     const mins = Math.round(totalMinutes % 60);
-    
     let res = [];
     if (years > 0) res.push(years + "y");
     if (months > 0) res.push(months + "mo");
     if (days > 0) res.push(days + "d");
     if (hours > 0) res.push(hours + "h");
     if (mins > 0 && years === 0) res.push(mins + "m");
-    
     return res.length > 0 ? res.slice(0, 3).join(" ") : "< 1m";
 }
-
 function init() {
     const i = document.getElementById("itemType");
     Object.keys(data).forEach(k => i.add(new Option(k, k)));
     const m = document.getElementById("line1Stat");
     mainStats.forEach(s => m.add(new Option(s, s)));
     initSubstats();
+    calculateCombinedOdds();
 }
-
 function updateLine1Max() { document.getElementById("line1Val").value = "3"; calculateSingle(); }
-
 function initSubstats() {
     const type = document.getElementById("itemType").value;
     const s = data[type].subs;
@@ -270,7 +340,8 @@ function initSubstats() {
     l2S.value = p.s2; l3S.value = p.s3;
     updateLineRange('line2', p.v2); updateLineRange('line3', p.v3);
 }
-
+function calculateLine2Select() { calculateSingle(); }
+function calculateLine3Select() { calculateSingle(); }
 function updateLineRange(lineId, forceVal = null) {
     const type = document.getElementById("itemType").value;
     const statName = document.getElementById(lineId + "Stat").value;
@@ -284,7 +355,6 @@ function updateLineRange(lineId, forceVal = null) {
     else valSelect.selectedIndex = valSelect.options.length - 1;
     calculateSingle();
 }
-
 function getIndividualProb(type, s1, v1, s2, v2, s3, v3) {
     const subs = data[type].subs;
     const p1 = (v1 === 3) ? (1/12) : (2/12);
@@ -294,24 +364,21 @@ function getIndividualProb(type, s1, v1, s2, v2, s3, v3) {
             if(!exclusions.some(ex => ex.includes(subs[i]) && ex.includes(subs[j]))) validPairs++;
         }
     }
-    const getRangeSuccesses = (s, v) => {
-        const r = data[type].ranges[s];
-        return Math.abs(r[1] - v) + 1;
-    };
-    const getRangeTotal = (s) => {
-        const r = data[type].ranges[s];
-        return Math.abs(r[1] - r[0]) + 1;
-    };
+    const getRangeSuccesses = (s, v) => { const r = data[type].ranges[s]; return Math.abs(r[1] - v) + 1; };
+    const getRangeTotal = (s) => { const r = data[type].ranges[s]; return Math.abs(r[1] - r[0]) + 1; };
     const prob = p1 * (1/validPairs) * (getRangeSuccesses(s2, v2) / getRangeTotal(s2)) * (getRangeSuccesses(s3, v3) / getRangeTotal(s3));
     return isNaN(prob) ? 0 : prob;
 }
-
 function calculateSingle() {
     const t = document.getElementById("itemType").value;
     const v1 = parseInt(document.getElementById("line1Val").value);
     const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
     const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
-    const isEx = exclusions.some(ex => ex.includes(s2) && ex.includes(s3)) || s2 === s3;
+    const isEx = exclusions.some(ex => {
+        const matchedS2 = ex.includes(s2);
+        const matchedS3 = ex.includes(s3);
+        return matchedS2 && matchedS3 && (s2 !== s3);
+    }) || s2 === s3;
     const isMax = (v1 === 3 && v2 == data[t].ranges[s2][1] && v3 == data[t].ranges[s3][1]);
     const box = document.getElementById("selectionBox");
     if (isEx) {
@@ -327,77 +394,186 @@ function calculateSingle() {
         document.getElementById("selectionPercent").innerText = (prob * 100).toFixed(6) + "%";
     }
 }
-
 function calculateCombinedOdds() {
     if(wantedList.length === 0) {
-        document.getElementById("combinedLabel").innerText = "Combined chance to hit ANY variant in list or better:";
         document.getElementById("combinedOdds").innerText = "---"; document.getElementById("combinedPercent").innerText = "0%";
-        return;
+        document.getElementById("combinedLabel").innerText = "Combined chance to hit ANY variant in list or better:";
+        globalWinProb = 0; updatePrepGuide(0); calculateFarmOdds(); return;
     }
     const type = wantedList[0].type;
     const pool = data[type].subs;
-    let allPerfect = true;
-    let validPairsCount = 0;
-    for(let i=0; i<pool.length; i++) {
-        for(let j=i+1; j<pool.length; j++) {
-            if(!exclusions.some(ex => ex.includes(pool[i]) && ex.includes(pool[j]))) validPairsCount++;
-        }
-    }
+    let allPerfect = true, validPairsCount = 0;
+    for(let i=0; i<pool.length; i++) for(let j=i+1; j<pool.length; j++) if(!exclusions.some(ex => ex.includes(pool[i]) && ex.includes(pool[j]))) validPairsCount++;
     const pairGroups = {};
     wantedList.forEach(t => {
-        const isEntryPerfect = (t.v1 === 3 && t.v2 == data[type].ranges[t.s2][1] && t.v3 == data[type].ranges[t.s3][1]);
-        if (!isEntryPerfect) allPerfect = false;
+        if (t.v1 !== 3 || t.v2 != data[type].ranges[t.s2][1] || t.v3 != data[type].ranges[t.s3][1]) allPerfect = false;
         const sortedPair = [t.s2, t.s3].sort();
         const key = `${t.s1}:${sortedPair[0]}:${sortedPair[1]}`;
         if(!pairGroups[key]) pairGroups[key] = { v1: t.v1, coords: new Set() };
         if(t.v1 < pairGroups[key].v1) pairGroups[key].v1 = t.v1;
         const r2 = data[type].ranges[t.s2], r3 = data[type].ranges[t.s3];
         const step2 = r2[1] >= r2[0] ? 1 : -1, step3 = r3[1] >= r3[0] ? 1 : -1;
-        for(let v2 = t.v2; v2 !== r2[1] + step2; v2 += step2) {
-            for(let v3 = t.v3; v3 !== r3[1] + step3; v3 += step3) {
-                const coord = (t.s2 === sortedPair[0]) ? `${v2},${v3}` : `${v3},${v2}`;
-                pairGroups[key].coords.add(coord);
-            }
-        }
+        for(let v2 = t.v2; v2 !== r2[1] + step2; v2 += step2) for(let v3 = t.v3; v3 !== r3[1] + step3; v3 += step3) pairGroups[key].coords.add(`${v2},${v3}`);
     });
     let totalProb = 0;
     for(const key in pairGroups) {
-        const group = pairGroups[key];
-        const [s1, s2, s3] = key.split(':');
+        const group = pairGroups[key], [s1, s2, s3] = key.split(':');
         const p1 = (group.v1 === 3) ? (1/12) : (2/12);
-        const totalPossibleSpace = (Math.abs(data[type].ranges[s2][1] - data[type].ranges[s2][0]) + 1) * (Math.abs(data[type].ranges[s3][1] - data[type].ranges[s3][0]) + 1);
-        totalProb += p1 * (1/validPairsCount) * (group.coords.size / totalPossibleSpace);
+        const totalSpace = (Math.abs(data[type].ranges[s2][1] - data[type].ranges[s2][0]) + 1) * (Math.abs(data[type].ranges[s3][1] - data[type].ranges[s3][0]) + 1);
+        totalProb += p1 * (1/validPairsCount) * (group.coords.size / totalSpace);
     }
-    const win = Math.min(totalProb, 1);
-    const ratio = Math.round(1/win);
+    globalWinProb = Math.min(totalProb, 1);
+    const ratio = Math.round(1/globalWinProb);
     document.getElementById("combinedLabel").innerText = allPerfect ? "Combined chance to get ANY of these PERFECT variants:" : "Combined chance to hit ANY variant in list or better:";
-    document.getElementById("combinedOdds").innerText = (isNaN(ratio) || !isFinite(ratio)) ? "---" : "1 in " + ratio.toLocaleString();
-    document.getElementById("combinedPercent").innerText = (win * 100).toFixed(6) + "%";
-    updatePrepGuide(win);
+    document.getElementById("combinedOdds").innerText = ratio.toLocaleString() ? "1 in " + ratio.toLocaleString() : "---";
+    document.getElementById("combinedPercent").innerText = (globalWinProb * 100).toFixed(6) + "%";
+    updatePrepGuide(globalWinProb); calculateFarmOdds();
 }
-
-function runSimulation() {
-    const amount = parseInt(document.getElementById("rollAmount").value) || 1;
-    const cost = parseInt(document.getElementById("matCost").value);
-    const goldVal = parseInt(document.getElementById("goldVal").value) || 0;
-    const stop = document.getElementById("stopOnWin").checked;
+function calculateFarmOdds() {
+    const kpm = parseFloat(document.getElementById("killsPerMin").value) || 1;
+    let baseDropInput = document.getElementById("baseDropChance"), baseDrop = (parseFloat(baseDropInput.value) || 0) / 100;
+    if (baseDrop > 1) { baseDrop = 1; baseDropInput.value = 100; }
+    const popNum = parseInt(document.getElementById("targetMobs").value) || 0, popTotal = parseInt(document.getElementById("totalMobs").value) || 1, popRatio = popNum / popTotal;
+    if (globalWinProb > 0 && popRatio > 0) {
+        const maxNeeded = (1 / (popRatio * globalWinProb)) * 100;
+        if (parseFloat(baseDropInput.value) > maxNeeded) { baseDropInput.value = Math.min(100, Math.ceil(maxNeeded * 10) / 10); baseDrop = parseFloat(baseDropInput.value) / 100; }
+    }
+    let farmWinChance = popRatio * baseDrop * globalWinProb;
+    const anyDropChance = popRatio * baseDrop, body = document.getElementById("farmPrepBody");
+    if (farmWinChance >= 1) farmWinChance = 0.9999;
+    document.getElementById("farmBtn").disabled = wantedList.length === 0;
+    document.getElementById("farmBtn").innerText = wantedList.length === 0 ? "Add a Variant to Start" : "Farm";
+    body.innerHTML = "";
+    [{ label: "Median", p: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", p: 0.80 }, { label: "Safe", p: 0.99 }].forEach(lvl => {
+        let n, dP, estDrops, timeStr;
+        if (isNaN(farmWinChance) || !isFinite(farmWinChance) || farmWinChance <= 0) { n = "--"; dP = lvl.isTheo ? "--" : (lvl.p * 100) + "%"; estDrops = "--"; timeStr = "--"; }
+        else {
+            let valN = lvl.isTheo ? Math.round(1 / farmWinChance) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - farmWinChance));
+            let valDP = lvl.isTheo ? (1 - Math.pow(1 - farmWinChance, valN)) * 100 : lvl.p * 100;
+            n = valN.toLocaleString(); dP = valDP.toFixed(lvl.isTheo ? 1 : 0) + "%";
+            estDrops = Math.ceil(valN * anyDropChance).toLocaleString(); timeStr = formatTime(valN / kpm);
+        }
+        const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
+        tr.innerHTML = `<td>${dP} (${lvl.label})</td><td>${n}</td><td>${estDrops}</td><td style="color: #bb86fc;">${timeStr}</td>`;
+        body.appendChild(tr);
+    });
+    calculateCombinedEfficiency();
+}
+function updatePrepGuide(p) {
+    const body = document.getElementById("prepBody"), matCost = parseInt(document.getElementById("matCost").value);
+    const goldVal = parseInt(document.getElementById("goldVal").value) || 0, mph = parseInt(document.getElementById("matsPerHour").value) || 0;
+    body.innerHTML = "";
+    [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
+        const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
+        if (isNaN(p) || !isFinite(p) || p <= 0) { tr.innerHTML = `<td>${lvl.isTheo ? "--" : (lvl.prob * 100) + "%"} (${lvl.label})</td><td>--</td><td>--</td><td>--</td><td>--</td>`; }
+        else {
+            let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
+            let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
+            const totalMats = n * matCost;
+            tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${totalMats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(totalMats * goldVal)}</td><td style="color: #bb86fc;">${mph > 0 ? formatTime((totalMats / mph) * 60) : "--"}</td>`;
+        }
+        body.appendChild(tr);
+    });
+    calculateCombinedEfficiency();
+}
+function calculateCombinedEfficiency() {
+    const body = document.getElementById("combinedEfficiencyBody"), kpm = parseFloat(document.getElementById("killsPerMin").value) || 0, mph = parseInt(document.getElementById("matsPerHour").value) || 0;
+    const matCost = parseInt(document.getElementById("matCost").value) || 1, baseDrop = (parseFloat(document.getElementById("baseDropChance").value) || 0) / 100;
+    const targetMobs = parseInt(document.getElementById("targetMobs").value) || 0, totalMobs = parseInt(document.getElementById("totalMobs").value) || 1, popRatio = targetMobs / totalMobs;
+    const farmLambda = kpm * popRatio * baseDrop * globalWinProb, rollsPerMin = mph / (60 * matCost), craftLambda = rollsPerMin * globalWinProb;
+    const farmingIsOff = farmLambda <= 0, craftingIsOff = craftLambda <= 0;
+    const tiers = [{ label: "Median", p: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", p: 0.80 }, { label: "Safe", p: 0.99 }];
+    body.innerHTML = "";
+    tiers.forEach(lvl => {
+        let displayTime = "--", pVal = lvl.p * 100, showP = (lvl.isTheo ? "--" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
+        if (farmingIsOff && !craftingIsOff) {
+            let n = lvl.isTheo ? Math.round(1 / globalWinProb) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - globalWinProb));
+            pVal = lvl.isTheo ? (1 - Math.pow(1 - globalWinProb, n)) * 100 : lvl.p * 100;
+            showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
+            displayTime = formatTime(((n * matCost) / mph) * 60);
+        } else if (craftingIsOff && !farmingIsOff) {
+            const farmWinChance = popRatio * baseDrop * globalWinProb;
+            let n = lvl.isTheo ? Math.round(1 / farmWinChance) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - farmWinChance));
+            pVal = lvl.isTheo ? (1 - Math.pow(1 - farmWinChance, n)) * 100 : lvl.p * 100;
+            showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
+            displayTime = formatTime(n / kpm);
+        } else if (!farmingIsOff && !craftingIsOff) {
+            const totalLambda = farmLambda + craftLambda;
+            let timeNeeded = lvl.isTheo ? 1 / totalLambda : -Math.log(1 - lvl.p) / totalLambda;
+            if (lvl.isTheo) pVal = (1 - Math.exp(-totalLambda * timeNeeded)) * 100;
+            showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
+            displayTime = formatTime(timeNeeded);
+        }
+        if (isNaN(pVal) || !isFinite(pVal)) { showP = "-- (" + lvl.label + ")"; displayTime = "--"; }
+        const tr = document.createElement("tr"); if (lvl.isTheo) tr.className = "highlight-row";
+        tr.innerHTML = `<td>${showP}</td><td style="color: #bb86fc; ${lvl.isTheo ? 'font-weight:bold;' : ''}">${displayTime}</td>`;
+        body.appendChild(tr);
+    });
+}
+function switchSimMode(mode) {
+    const isC = mode === 'crafting', isF = mode === 'farming', isH = mode === 'hybrid';
+    document.getElementById("craftModeTab").classList.toggle("active", isC); document.getElementById("farmModeTab").classList.toggle("active", isF); document.getElementById("hybridModeTab").classList.toggle("active", isH);
+    document.getElementById("craftingInputs").classList.toggle("hidden", !isC); document.getElementById("farmingInputs").classList.toggle("hidden", !isF); document.getElementById("hybridView").classList.toggle("hidden", !isH);
+    document.getElementById("craftStats").classList.toggle("hidden", !isC); document.getElementById("farmStats").classList.toggle("hidden", !isF);
+    document.getElementById("simBtn").classList.toggle("hidden", !isC); document.getElementById("farmBtn").classList.toggle("hidden", !isF);
+    document.getElementById("craftLogs").classList.toggle("hidden", !isC); document.getElementById("farmLogs").classList.toggle("hidden", !isF);
+    document.getElementById("simDivider").classList.toggle("hidden", isH);
+}
+function updateBasicCounters() { document.getElementById("totalCrafts").innerText = totalCrafts.toLocaleString(); document.getElementById("totalWins").innerText = totalWins.toLocaleString(); document.getElementById("totalClose").innerText = totalClose.toLocaleString(); document.getElementById("totalMats").innerText = totalMats.toLocaleString(); document.getElementById("totalGold").innerText = totalGold.toLocaleString() + "g"; }
+function updateStatsUI() { updateBasicCounters(); if(totalWins > 0) { document.getElementById("avgMats").innerText = Math.round(totalMats / totalWins).toLocaleString(); document.getElementById("avgGold").innerText = Math.round(totalGold / totalWins).toLocaleString() + "g"; } }
+function updateFarmUI(kpm, isSuccess) {
+    document.getElementById("totalKills").innerText = totalKills.toLocaleString(); document.getElementById("farmWins").innerText = farmWins.toLocaleString();
+    document.getElementById("farmClose").innerText = farmClose.toLocaleString(); document.getElementById("totalDrops").innerText = totalDrops.toLocaleString();
+    document.getElementById("farmTimeSpent").innerText = formatTime(totalKills / kpm);
+    if(isSuccess && farmWins > 0) {
+        document.getElementById("avgFarmTime").innerText = formatTime((totalKills / kpm) / farmWins);
+        document.getElementById("avgDropsPerWin").innerText = (totalDrops / farmWins).toFixed(1);
+        document.getElementById("avgKillsPerWin").innerText = Math.round(totalKills / farmWins).toLocaleString();
+    }
+}
+function runFarmSimulation() {
+    const amount = parseInt(document.getElementById("farmAmount").value) || 1, kpm = parseFloat(document.getElementById("killsPerMin").value) || 1, baseDrop = (parseFloat(document.getElementById("baseDropChance").value) || 0) / 100;
+    const popRatio = (parseInt(document.getElementById("targetMobs").value) || 0) / (parseInt(document.getElementById("totalMobs").value) || 1), stop = document.getElementById("stopOnFarmWin").checked;
     const type = wantedList[0].type, pool = data[type].subs;
-    const showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
+    for(let i=0; i<amount; i++) {
+        totalKills++;
+        if (Math.random() <= popRatio && Math.random() <= baseDrop) {
+            totalDrops++;
+            const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.floor(Math.random() * 2) + 2;
+            let rS2, rS3;
+            while(true) { rS2 = pool[Math.floor(Math.random()*pool.length)]; rS3 = pool[Math.floor(Math.random()*pool.length)]; if(rS2 !== rS3 && !exclusions.some(ex => ex.includes(rS2) && ex.includes(rS3))) break; }
+            const rollVal = (s) => { const r = data[type].ranges[s]; return Math.floor(Math.random() * (Math.max(r[0], r[1]) - Math.min(r[0], r[1]) + 1)) + Math.min(r[0], r[1]); };
+            const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
+            let isWin = false, isClose = false;
+            wantedList.forEach(t => {
+                if (rS1 === t.s1 && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2))) {
+                    const checkV = (rv, tv, sName) => { const r = data[type].ranges[sName]; return (r[1] > r[0]) ? rv >= tv : rv <= tv; };
+                    const tv2 = (rS2 === t.s2) ? t.v2 : t.v3, tv3 = (rS3 === t.s3) ? t.v3 : t.v2;
+                    if (rV1 >= t.v1 && checkV(rV2, tv2, rS2) && checkV(rV3, tv3, rS3)) isWin = true; else isClose = true;
+                }
+            });
+            const div = document.createElement("div"); div.className = "log-entry " + (isWin ? "success" : isClose ? "close-hit" : "fail");
+            div.innerHTML = `Kill #${totalKills.toLocaleString()}: ${rS1} ${rV1} | ${rS2} ${rV2}${data[type].ranges[rS2][2]} | ${rS3} ${rV3}${data[type].ranges[rS3][2]}` + (isWin ? " - SUCCESS!" : isClose ? " - CLOSE!" : "");
+            document.getElementById("farmAllLog").prepend(div);
+            if (isWin) { farmWins++; document.getElementById("farmWinLog").prepend(div.cloneNode(true)); updateFarmUI(kpm, true); if(stop) break; }
+            else if (isClose) { farmClose++; document.getElementById("farmCloseLog").prepend(div.cloneNode(true)); updateFarmUI(kpm, false); }
+            else updateFarmUI(kpm, false);
+        } else updateFarmUI(kpm, false);
+    }
+}
+function runSimulation() {
+    const amount = parseInt(document.getElementById("rollAmount").value) || 1, cost = parseInt(document.getElementById("matCost").value), goldVal = parseInt(document.getElementById("goldVal").value) || 0;
+    const stop = document.getElementById("stopOnWin").checked, type = wantedList[0].type, pool = data[type].subs, showLogGold = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
     for(let i=0; i<amount; i++) {
         totalCrafts++; totalMats += cost; totalGold += (cost * goldVal);
-        const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.floor(Math.random() * 2) + 2; 
+        const rS1 = mainStats[Math.floor(Math.random()*6)], rV1 = Math.floor(Math.random() * 2) + 2;
         let rS2, rS3;
-        while(true) {
-            rS2 = pool[Math.floor(Math.random()*pool.length)]; rS3 = pool[Math.floor(Math.random()*pool.length)];
-            if(rS2 !== rS3 && !exclusions.some(ex => ex.includes(rS2) && ex.includes(rS3))) break;
-        }
-        const rollVal = (s) => { const r = data[type].ranges[s]; const min = Math.min(r[0], r[1]), max = Math.max(r[0], r[1]); return Math.floor(Math.random() * (max - min + 1)) + min; };
+        while(true) { rS2 = pool[Math.floor(Math.random()*pool.length)]; rS3 = pool[Math.floor(Math.random()*pool.length)]; if(rS2 !== rS3 && !exclusions.some(ex => ex.includes(rS2) && ex.includes(rS3))) break; }
+        const rollVal = (s) => { const r = data[type].ranges[s]; return Math.floor(Math.random() * (Math.max(r[0], r[1]) - Math.min(r[0], r[1]) + 1)) + Math.min(r[0], r[1]); };
         const rV2 = rollVal(rS2), rV3 = rollVal(rS3);
         let isWin = false, isClose = false;
         wantedList.forEach(t => {
-            const matchS1 = (rS1 === t.s1);
-            const matchPair = (rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2);
-            if (matchS1 && matchPair) {
+            if (rS1 === t.s1 && ((rS2 === t.s2 && rS3 === t.s3) || (rS2 === t.s3 && rS3 === t.s2))) {
                 const checkV = (rv, tv, sName) => { const r = data[type].ranges[sName]; return (r[1] > r[0]) ? rv >= tv : rv <= tv; };
                 const tv2 = (rS2 === t.s2) ? t.v2 : t.v3, tv3 = (rS3 === t.s3) ? t.v3 : t.v2;
                 if (rV1 >= t.v1 && checkV(rV2, tv2, rS2) && checkV(rV3, tv3, rS3)) isWin = true; else isClose = true;
@@ -411,32 +587,17 @@ function runSimulation() {
         else { if(isClose) { totalClose++; document.getElementById("closeLog").prepend(div.cloneNode(true)); } updateBasicCounters(); }
     }
 }
-
 function addTarget() {
-    const type = document.getElementById("itemType").value;
-    const s1 = document.getElementById("line1Stat").value, v1 = parseInt(document.getElementById("line1Val").value);
-    const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value);
-    const s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
+    const type = document.getElementById("itemType").value, s1 = document.getElementById("line1Stat").value, v1 = parseInt(document.getElementById("line1Val").value);
+    const s2 = document.getElementById("line2Stat").value, v2 = parseInt(document.getElementById("line2Val").value), s3 = document.getElementById("line3Stat").value, v3 = parseInt(document.getElementById("line3Val").value);
     if (wantedList.length > 0 && wantedList[0].type !== type) { alert("Please clear variants before switching Item Types."); return; }
-    const isDuplicate = wantedList.some(t => {
-        const subMatch = (t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3) || (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2);
-        return (t.s1 === s1 && t.v1 === v1) && subMatch;
-    });
-    if (isDuplicate) { alert("This variant is already in your list."); return; }
-    wantedList.push({ type, s1, v1, s2, v2, s3, v3, id: Date.now() });
-    renderWantedList();
+    if (wantedList.some(t => t.s1 === s1 && t.v1 === v1 && ((t.s2 === s2 && t.v2 === v2 && t.s3 === s3 && t.v3 === v3) || (t.s2 === s3 && t.v2 === v3 && t.s3 === s2 && t.v3 === v2)))) { alert("This variant is already in your list."); return; }
+    wantedList.push({ type, s1, v1, s2, v2, s3, v3, id: Date.now() }); renderWantedList();
 }
-
 function renderWantedList() {
-    const container = document.getElementById("targetList");
-    const simBtn = document.getElementById("simBtn");
-    if(wantedList.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>';
-        simBtn.disabled = true; simBtn.innerText = "Add a Variant to Start";
-        calculateCombinedOdds(); 
-        document.getElementById("prepGuide").classList.add("hidden"); return;
-    }
-    simBtn.disabled = false; simBtn.innerText = "Roll"; container.innerHTML = "";
+    const container = document.getElementById("targetList"), simBtn = document.getElementById("simBtn"), farmBtn = document.getElementById("farmBtn");
+    if(wantedList.length === 0) { container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>'; simBtn.disabled = farmBtn.disabled = true; simBtn.innerText = farmBtn.innerText = "Add a Variant to Start"; calculateCombinedOdds(); return; }
+    simBtn.disabled = farmBtn.disabled = false; simBtn.innerText = "Roll"; farmBtn.innerText = "Farm"; container.innerHTML = "";
     wantedList.forEach(t => {
         const div = document.createElement("div"); div.className = "target-card";
         div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${data[t.type].ranges[t.s2][2]} | ${t.s3} ${t.v3}${data[t.type].ranges[t.s3][2]}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
@@ -444,79 +605,14 @@ function renderWantedList() {
     });
     calculateCombinedOdds();
 }
-
 function clearWantedList() { wantedList = []; renderWantedList(); }
 function removeTarget(id) { wantedList = wantedList.filter(t => t.id !== id); renderWantedList(); }
-
-function updatePrepGuide(p) {
-    const body = document.getElementById("prepBody");
-    const matCost = parseInt(document.getElementById("matCost").value);
-    const goldInput = document.getElementById("goldVal").value;
-    const goldVal = (goldInput === "" || isNaN(goldInput)) ? 0 : parseInt(goldInput);
-    
-    const mphInput = document.getElementById("matsPerHour").value;
-    const mph = (mphInput === "" || isNaN(mphInput) || parseInt(mphInput) <= 0) ? 0 : parseInt(mphInput);
-    
-    document.getElementById("prepGuide").classList.remove("hidden"); body.innerHTML = "";
-    [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
-        let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
-        let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
-        const totalMatsNeeded = n * matCost;
-        const totalMinutes = mph > 0 ? (totalMatsNeeded / mph) * 60 : 0;
-        
-        const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
-        tr.innerHTML = `
-            <td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td>
-            <td>${n.toLocaleString()}</td>
-            <td>${totalMatsNeeded.toLocaleString()}</td>
-            <td class="gold-text">${formatGoldTable(totalMatsNeeded * goldVal)}</td>
-            <td style="color: #bb86fc;">${mph > 0 ? formatTime(totalMinutes) : "--"}</td>
-        `;
-        body.appendChild(tr);
-    });
-}
-
-function updateBasicCounters() {
-    document.getElementById("totalCrafts").innerText = totalCrafts.toLocaleString();
-    document.getElementById("totalWins").innerText = totalWins.toLocaleString();
-    document.getElementById("totalClose").innerText = totalClose.toLocaleString();
-    document.getElementById("totalMats").innerText = totalMats.toLocaleString();
-    document.getElementById("totalGold").innerText = totalGold.toLocaleString() + "g";
-}
-
-function updateStatsUI() {
-    updateBasicCounters();
-    if(totalWins > 0) {
-        document.getElementById("avgMats").innerText = Math.round(totalMats / totalWins).toLocaleString();
-        document.getElementById("avgGold").innerText = Math.round(totalGold / totalWins).toLocaleString() + "g";
-    }
-}
-
-function toggleGoldUI() {
-    const show = document.getElementById("toggleGold").checked;
-    document.querySelectorAll(".gold-element").forEach(el => el.classList.toggle("hidden", !show));
-    document.getElementById("toggleLogGold").disabled = !show; toggleLogGoldUI();
-}
-
-function toggleLogGoldUI() {
-    const show = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked;
-    document.querySelectorAll(".log-gold").forEach(el => el.classList.toggle("hidden", !show));
-}
-
-function switchLog(t) {
-    ["all","close","win"].forEach(id => {
-        document.getElementById(id+"Tab").classList.toggle("active", t===id);
-        document.getElementById(id+"Log").classList.toggle("hidden", t!==id);
-    });
-}
-
-function clearLog() {
-    totalCrafts = totalWins = totalMats = totalGold = totalClose = 0;
-    ["allLog","winLog","closeLog"].forEach(id => document.getElementById(id).innerHTML = "");
-    document.getElementById("avgMats").innerText = "--"; document.getElementById("avgGold").innerText = "--";
-    updateBasicCounters();
-}
-
+function toggleGoldUI() { const show = document.getElementById("toggleGold").checked; document.querySelectorAll(".gold-element").forEach(el => el.classList.toggle("hidden", !show)); document.getElementById("toggleLogGold").disabled = !show; toggleLogGoldUI(); }
+function toggleLogGoldUI() { const show = document.getElementById("toggleGold").checked && document.getElementById("toggleLogGold").checked; document.querySelectorAll(".log-gold").forEach(el => el.classList.toggle("hidden", !show)); }
+function switchLog(t) { ["all","close","win"].forEach(id => { document.getElementById(id+"Tab").classList.toggle("active", t===id); document.getElementById(id+"Log").classList.toggle("hidden", t!==id); }); }
+function clearLog() { totalCrafts = totalWins = totalMats = totalGold = totalClose = 0; ["allLog","winLog","closeLog"].forEach(id => document.getElementById(id).innerHTML = ""); document.getElementById("avgMats").innerText = "--"; document.getElementById("avgGold").innerText = "--"; updateBasicCounters(); }
+function switchFarmLog(t) { ["farmAll","farmClose","farmWin"].forEach(id => { document.getElementById(id+"Tab").classList.toggle("active", t===id.replace('farm','').toLowerCase()); document.getElementById(id+"Log").classList.toggle("hidden", t!==id.replace('farm','').toLowerCase()); }); }
+function clearFarmLog() { totalKills = farmWins = farmClose = totalDrops = 0; ["farmAllLog","farmWinLog","farmCloseLog"].forEach(id => document.getElementById(id).innerHTML = ""); document.getElementById("avgFarmTime").innerText = "--"; document.getElementById("avgDropsPerWin").innerText = "--"; document.getElementById("avgKillsPerWin").innerText = "--"; updateFarmUI(1, false); }
 init();
 </script>
 </body>
