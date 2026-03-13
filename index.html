@@ -121,8 +121,8 @@
             <input type="number" id="goldVal" value="1000" min="0" step="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 0)" onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
         </div>
         <div>
-            <label>Materials / Hour</label>
-            <input type="number" id="matsPerHour" value="0" min="0" step="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 0)" onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
+            <label>Materials / Minute</label>
+            <input type="number" id="matsPerMin" value="0" min="0" step="1" onkeydown="blockSpecialChars(event)" oninput="validateIntegerInput(this, 0)" onblur="if(this.value==='') { this.value=0; calculateCombinedOdds(); }">
         </div>
         <div class="full-width">
             <div id="prepGuide">
@@ -192,7 +192,7 @@
             <tbody id="combinedEfficiencyBody"></tbody>
         </table>
         <p style="font-size: 0.7em; color: #555; text-align: center; margin-top: 10px;">
-            Adjust Kills/Min and Materials/Hour in the other tabs to update these times.
+            Adjust Kills/Min and Materials/Minute in the other tabs to update these times.
         </p>
     </div>
 
@@ -461,7 +461,7 @@ function calculateFarmOdds() {
 }
 function updatePrepGuide(p) {
     const body = document.getElementById("prepBody"), matCost = parseInt(document.getElementById("matCost").value);
-    const goldVal = parseInt(document.getElementById("goldVal").value) || 0, mph = parseInt(document.getElementById("matsPerHour").value) || 0;
+    const goldVal = parseInt(document.getElementById("goldVal").value) || 0, mpm = parseInt(document.getElementById("matsPerMin").value) || 0;
     body.innerHTML = "";
     [{ label: "Median", prob: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", prob: 0.80 }, { label: "Safe", prob: 0.99 }].forEach(lvl => {
         const tr = document.createElement("tr"); if(lvl.isTheo) tr.className = "highlight-row";
@@ -470,17 +470,17 @@ function updatePrepGuide(p) {
             let n = lvl.isTheo ? Math.round(1/p) : Math.ceil(Math.log(1 - lvl.prob) / Math.log(1 - p));
             let dP = lvl.isTheo ? (1 - Math.pow(1 - p, n)) * 100 : lvl.prob * 100;
             const totalMats = n * matCost;
-            tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${totalMats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(totalMats * goldVal)}</td><td style="color: #bb86fc;">${mph > 0 ? formatTime((totalMats / mph) * 60) : "--"}</td>`;
+            tr.innerHTML = `<td>${dP.toFixed(lvl.isTheo ? 1 : 0)}% (${lvl.label})</td><td>${n.toLocaleString()}</td><td>${totalMats.toLocaleString()}</td><td class="gold-text">${formatGoldTable(totalMats * goldVal)}</td><td style="color: #bb86fc;">${mpm > 0 ? formatTime(totalMats / mpm) : "--"}</td>`;
         }
         body.appendChild(tr);
     });
     calculateCombinedEfficiency();
 }
 function calculateCombinedEfficiency() {
-    const body = document.getElementById("combinedEfficiencyBody"), kpm = parseFloat(document.getElementById("killsPerMin").value) || 0, mph = parseInt(document.getElementById("matsPerHour").value) || 0;
+    const body = document.getElementById("combinedEfficiencyBody"), kpm = parseFloat(document.getElementById("killsPerMin").value) || 0, mpm = parseInt(document.getElementById("matsPerMin").value) || 0;
     const matCost = parseInt(document.getElementById("matCost").value) || 1, baseDrop = (parseFloat(document.getElementById("baseDropChance").value) || 0) / 100;
     const targetMobs = parseInt(document.getElementById("targetMobs").value) || 0, totalMobs = parseInt(document.getElementById("totalMobs").value) || 1, popRatio = targetMobs / totalMobs;
-    const farmLambda = kpm * popRatio * baseDrop * globalWinProb, rollsPerMin = mph / (60 * matCost), craftLambda = rollsPerMin * globalWinProb;
+    const farmLambda = kpm * popRatio * baseDrop * globalWinProb, rollsPerMin = mpm / matCost, craftLambda = rollsPerMin * globalWinProb;
     const farmingIsOff = farmLambda <= 0, craftingIsOff = craftLambda <= 0;
     const tiers = [{ label: "Median", p: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", p: 0.80 }, { label: "Safe", p: 0.99 }];
     body.innerHTML = "";
@@ -490,7 +490,7 @@ function calculateCombinedEfficiency() {
             let n = lvl.isTheo ? Math.round(1 / globalWinProb) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - globalWinProb));
             pVal = lvl.isTheo ? (1 - Math.pow(1 - globalWinProb, n)) * 100 : lvl.p * 100;
             showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
-            displayTime = formatTime(((n * matCost) / mph) * 60);
+            displayTime = formatTime((n * matCost) / mpm);
         } else if (craftingIsOff && !farmingIsOff) {
             const farmWinChance = popRatio * baseDrop * globalWinProb;
             let n = lvl.isTheo ? Math.round(1 / farmWinChance) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - farmWinChance));
