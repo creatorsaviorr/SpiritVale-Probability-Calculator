@@ -2,7 +2,7 @@
 
 The **SpiritVale Item Probability Simulator** is a tool I created for the community. It calculates the odds of obtaining specific gear variants through crafting or farming and provides a clear view of how much time and resources are typically required to reach your goals.
 
-## :tools: Features
+## 🛠️ Features
 
 * **Crafting Simulator:** Simulate crafting attempts to see the probability of hitting specific substats and rolls.
 * **Farming Simulator:** Calculate your farming efforts by inputting your kill rate and mob density to receive a realistic projection of your time-to-drop.
