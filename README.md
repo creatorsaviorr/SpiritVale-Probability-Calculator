@@ -20,3 +20,5 @@ The **SpiritVale Item Probability Simulator** is a tool I created for the commun
 * **Crafting:** Set your material costs and materials/minute to track your potential resource usage and progress.
 * **Farming:** Adjust **"Target Mobs"** (the specific mobs that drop the item you're looking for) vs. **"Total Mobs"** (the total mob population in the map) along with your **kills/minute** to match your specific playstyle.
 * **Hybrid View:** Use this to see how much faster you can obtain your item when you combine both crafting and farming efforts. It calculates the expected time and resource investment for your goal by accounting for both methods working together.
+
+Enjoy planning your gear, and good luck with the farming! 🚀
