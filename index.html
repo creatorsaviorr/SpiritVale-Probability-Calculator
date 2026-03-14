@@ -1,4 +1,4 @@
-<meta name='viewport' content='width=device-width, initial-scale=1'/><meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -192,7 +192,7 @@
             <tbody id="combinedEfficiencyBody"></tbody>
         </table>
         <p style="font-size: 0.7em; color: #555; text-align: center; margin-top: 10px;">
-            Adjust Kills/Min and Materials/Minute in the other tabs to update these times.
+            Adjust Kills / Minute and Materials / Minute in the other tabs to update these times.
         </p>
     </div>
 
@@ -480,31 +480,53 @@ function calculateCombinedEfficiency() {
     const body = document.getElementById("combinedEfficiencyBody"), kpm = parseFloat(document.getElementById("killsPerMin").value) || 0, mpm = parseInt(document.getElementById("matsPerMin").value) || 0;
     const matCost = parseInt(document.getElementById("matCost").value) || 1, baseDrop = (parseFloat(document.getElementById("baseDropChance").value) || 0) / 100;
     const targetMobs = parseInt(document.getElementById("targetMobs").value) || 0, totalMobs = parseInt(document.getElementById("totalMobs").value) || 1, popRatio = targetMobs / totalMobs;
-    const farmLambda = kpm * popRatio * baseDrop * globalWinProb, rollsPerMin = mpm / matCost, craftLambda = rollsPerMin * globalWinProb;
+    
+    const farmWinChance = popRatio * baseDrop * globalWinProb;
+    const farmLambda = kpm * farmWinChance;
+    const rollsPerMin = mpm / matCost, craftLambda = rollsPerMin * globalWinProb;
+    
     const farmingIsOff = farmLambda <= 0, craftingIsOff = craftLambda <= 0;
+    const isInactive = farmingIsOff && craftingIsOff;
     const tiers = [{ label: "Median", p: 0.50 }, { label: "Theoretical", isTheo: true }, { label: "Likely", p: 0.80 }, { label: "Safe", p: 0.99 }];
+    
     body.innerHTML = "";
     tiers.forEach(lvl => {
-        let displayTime = "--", pVal = lvl.p * 100, showP = (lvl.isTheo ? "--" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
-        if (farmingIsOff && !craftingIsOff) {
-            let n = lvl.isTheo ? Math.round(1 / globalWinProb) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - globalWinProb));
-            pVal = lvl.isTheo ? (1 - Math.pow(1 - globalWinProb, n)) * 100 : lvl.p * 100;
-            showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
-            displayTime = formatTime((n * matCost) / mpm);
-        } else if (craftingIsOff && !farmingIsOff) {
-            const farmWinChance = popRatio * baseDrop * globalWinProb;
-            let n = lvl.isTheo ? Math.round(1 / farmWinChance) : Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - farmWinChance));
-            pVal = lvl.isTheo ? (1 - Math.pow(1 - farmWinChance, n)) * 100 : lvl.p * 100;
-            showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
-            displayTime = formatTime(n / kpm);
-        } else if (!farmingIsOff && !craftingIsOff) {
-            const totalLambda = farmLambda + craftLambda;
-            let timeNeeded = lvl.isTheo ? 1 / totalLambda : -Math.log(1 - lvl.p) / totalLambda;
-            if (lvl.isTheo) pVal = (1 - Math.exp(-totalLambda * timeNeeded)) * 100;
-            showP = (lvl.isTheo ? pVal.toFixed(1) + "%" : pVal.toFixed(0) + "%") + " (" + lvl.label + ")";
-            displayTime = formatTime(timeNeeded);
+        let displayTime = "--", showP = "";
+        
+        if (isInactive) {
+            showP = (lvl.isTheo ? "--" : (lvl.p * 100) + "%") + " (" + lvl.label + ")";
+        } else {
+            let timeFarming = Infinity, timeCrafting = Infinity, timeHybrid = Infinity;
+
+            if (!farmingIsOff) {
+                timeFarming = lvl.isTheo ? (1 / farmWinChance) / kpm : (Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - farmWinChance))) / kpm;
+            }
+            if (!craftingIsOff) {
+                timeCrafting = lvl.isTheo ? (1 / globalWinProb) * matCost / mpm : (Math.ceil(Math.log(1 - lvl.p) / Math.log(1 - globalWinProb))) * matCost / mpm;
+            }
+            if (!farmingIsOff && !craftingIsOff) {
+                const totalLambda = farmLambda + craftLambda;
+                timeHybrid = lvl.isTheo ? 1 / totalLambda : -Math.log(1 - lvl.p) / totalLambda;
+            }
+
+            let finalTime = Math.min(timeFarming, timeCrafting, timeHybrid);
+            displayTime = formatTime(finalTime);
+
+            if (lvl.isTheo) {
+                let combinedP;
+                if (!farmingIsOff && !craftingIsOff) {
+                     combinedP = (1 - Math.exp(-1)) * 100; 
+                } else if (!farmingIsOff) {
+                     combinedP = (1 - Math.pow(1 - farmWinChance, Math.round(1/farmWinChance))) * 100;
+                } else {
+                     combinedP = (1 - Math.pow(1 - globalWinProb, Math.round(1/globalWinProb))) * 100;
+                }
+                showP = combinedP.toFixed(1) + "% (" + lvl.label + ")";
+            } else {
+                showP = (lvl.p * 100).toFixed(0) + "% (" + lvl.label + ")";
+            }
         }
-        if (isNaN(pVal) || !isFinite(pVal)) { showP = "-- (" + lvl.label + ")"; displayTime = "--"; }
+        
         const tr = document.createElement("tr"); if (lvl.isTheo) tr.className = "highlight-row";
         tr.innerHTML = `<td>${showP}</td><td style="color: #bb86fc; ${lvl.isTheo ? 'font-weight:bold;' : ''}">${displayTime}</td>`;
         body.appendChild(tr);
@@ -595,9 +617,9 @@ function addTarget() {
     wantedList.push({ type, s1, v1, s2, v2, s3, v3, id: Date.now() }); renderWantedList();
 }
 function renderWantedList() {
-    const container = document.getElementById("targetList"), simBtn = document.getElementById("simBtn"), farmBtn = document.getElementById("farmBtn");
-    if(wantedList.length === 0) { container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>'; simBtn.disabled = farmBtn.disabled = true; simBtn.innerText = farmBtn.innerText = "Add a Variant to Start"; calculateCombinedOdds(); return; }
-    simBtn.disabled = farmBtn.disabled = false; simBtn.innerText = "Roll"; farmBtn.innerText = "Farm"; container.innerHTML = "";
+    const container = document.getElementById("targetList"), simBtn = document.getElementById("simBtn"), farmBtn = document.getElementById("btn");
+    if(wantedList.length === 0) { container.innerHTML = '<div style="text-align:center; color:#666; padding:10px;">No variants added.</div>'; if(simBtn) simBtn.disabled = true; if(farmBtn) farmBtn.disabled = true; if(simBtn) simBtn.innerText = "Add a Variant to Start"; if(farmBtn) farmBtn.innerText = "Add a Variant to Start"; calculateCombinedOdds(); return; }
+    if(simBtn) simBtn.disabled = false; if(farmBtn) farmBtn.disabled = false; if(simBtn) simBtn.innerText = "Roll"; if(farmBtn) farmBtn.innerText = "Farm"; container.innerHTML = "";
     wantedList.forEach(t => {
         const div = document.createElement("div"); div.className = "target-card";
         div.innerHTML = `<span>${t.s1} ${t.v1} | ${t.s2} ${t.v2}${data[t.type].ranges[t.s2][2]} | ${t.s3} ${t.v3}${data[t.type].ranges[t.s3][2]}</span><button class="btn-del" onclick="removeTarget(${t.id})">Delete</button>`;
